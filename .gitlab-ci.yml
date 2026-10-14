@@ -1,0 +1,94 @@
+# Publishes the dashboard to GitLab Pages with a fresh data snapshot.
+#
+# The browser cannot call NerdGraph itself (no CORS headers), and a key shipped
+# to Pages would be public. So the runner does the querying and publishes only
+# the resulting numbers as data.json.
+#
+# CI/CD variables (Settings > CI/CD > Variables):
+#   NEW_RELIC_API_KEY  a New Relic User key        — Masked, Protected
+#   JIRA_EMAIL         your Atlassian login email  — Protected (not secret)
+#   JIRA_API_TOKEN     the Atlassian API token ONLY, without the email
+#                                                  — Masked, Protected
+# The Jira pair is optional; without it only the ops snapshot is published.
+
+stages:
+  - deploy
+
+variables:
+  # Runners on gitlab.eqs.tools are tagged. The build/test runners are the
+  # recommended ones for jobs like this; other repos in this group tag their
+  # Pages jobs "build".
+  #
+  # NOTE: a list such as `tags: [build, test]` requires ONE runner carrying
+  # BOTH tags — it is an AND, not an OR. If build and test are separate
+  # runners, that matches nothing and the job stays pending. So pick one here,
+  # or override RUNNER_TAG when running the pipeline.
+  RUNNER_TAG: build
+
+pages:
+  stage: deploy
+  tags:
+    - $RUNNER_TAG
+  image: python:3.12-alpine
+  interruptible: true
+  before_script:
+    # Alpine ships no timezone database, and the Monday-to-Sunday week
+    # boundaries are computed in Europe/Berlin.
+    - apk add --no-cache tzdata
+  script:
+    - test -n "$NEW_RELIC_API_KEY" || { echo "NEW_RELIC_API_KEY is not set for this pipeline."; exit 1; }
+    - mkdir -p public
+    - python3 fetch_snapshot.py --config config.json --out public/data.json
+    # Jira is optional: the Atlassian IP allowlist must permit the runner, and
+    # JIRA_EMAIL / JIRA_API_TOKEN must be set. The ops snapshot still publishes
+    # without it, and the Delivery tab explains itself when the file is absent.
+    - |
+      if [ -n "$JIRA_EMAIL" ] && [ -n "$JIRA_API_TOKEN" ]; then
+        # Top up rather than rebuild. Last night's run is still being served by
+        # Pages, so its delivery.json is the base: weeks it already has are kept
+        # and only the recent ones are re-queried. That turns a few hundred Jira
+        # requests a night into a handful, and lets the file accumulate history
+        # beyond what a single run could fetch.
+        #
+        # Two weeks, not one: issues resolved late or reopened change the week
+        # just gone, so it is worth asking again. If the base cannot be read the
+        # script widens the fetch by itself rather than publishing a short file.
+        python3 fetch_jira.py --config config.json \
+          --base "$CI_PAGES_URL/delivery.json" --weeks 2 \
+          --out public/delivery.json \
+          || echo "Jira fetch failed; publishing without the Delivery data"
+      else
+        [ -n "$JIRA_EMAIL" ]     || echo "JIRA_EMAIL is not set"
+        [ -n "$JIRA_API_TOKEN" ] || echo "JIRA_API_TOKEN is not set"
+        echo "skipping the Delivery data"
+      fi
+    # Team health comes from another team's published export — no credentials,
+    # just an internal URL the runner can reach. A failure here is not fatal:
+    # the tab simply does not appear.
+    - |
+      python3 fetch_officevibe.py --config config.json --out public/engagement.json \
+        || echo "Officevibe export unavailable; publishing without the Team health tab"
+    - cp index.html public/index.html
+    - |
+      echo "Publishing:"
+      for f in public/data.json public/delivery.json public/engagement.json public/index.html; do
+        [ -f "$f" ] && echo "  $f  $(du -h "$f" | cut -f1)" || echo "  $f  (absent)"
+      done
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  rules:
+    # daily refresh — create the schedule under Build > Pipeline schedules
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # manual "Run pipeline" for an on-demand refresh
+    - if: $CI_PIPELINE_SOURCE == "web"
+    # redeploy when the dashboard or its settings change
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - index.html
+        - config.json
+        - fetch_snapshot.py
+        - fetch_jira.py
+        - fetch_officevibe.py
+        - .gitlab-ci.yml
