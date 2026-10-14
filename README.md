@@ -1,14 +1,11 @@
 # Weekly Ops Dashboard
 
 Week-by-week New Relic numbers for the Foundation Enablement Team's applications — uptime,
-response time, errors, error rate and alerts, per application and per provider. Source dashboard:
-[New Relic](https://onenr.io/0qwLP8EKgw5).
+response time, errors, error rate and alerts, per application and per provider.
 
 Weeks run **Monday 00:00:00 to Sunday 23:59:59.999 Europe/Berlin**, so CET in winter and CEST in
 summer. DST is handled: the last week of March is 167 hours, the last week of October 169, and the
 buckets still start and end on the real Monday and Sunday.
-
-Public dashboards are mirrored at <https://go.eqs/cc-ops-dashboard>.
 
 ## Run it
 
@@ -31,16 +28,16 @@ GUIDs, facet attribute, NRQL and thresholds:
 "team": { "name": "Foundation Enablement Team" },
 "defaultApplication": "all",
 "applications": [
-  { "id": "data-center-api", "name": "Data-Center-Api", "kind": "apm",
+  { "id": "...", "name": "backend application name", "kind": "apm",
     "hostAttribute": "entity.name", "entityGuids": [ ... ], "thresholds": { ... }, "nrql": { ... } },
-  { "id": "control-tower",   "name": "Control Tower",   "kind": "synthetic",
+  { "id": "...",   "name": "frontend application name",   "kind": "synthetic",
     "hostAttribute": "monitorName", "entityGuids": [ ... ], "thresholds": { ... }, "nrql": { ... } }
 ]
 ```
 
 `kind` is what makes two very different applications share one table:
 
-| | Data-Center-Api (`apm`) | Control Tower (`synthetic`) |
+| | backend application (`apm`) | frontend application (`synthetic`) |
 |---|---|---|
 | Source | `Metric` — real request traffic | `SyntheticCheck` — ping monitors |
 | Availability | 100 − error rate | % of checks returning SUCCESS |
@@ -52,14 +49,14 @@ Two details that would corrupt the numbers if copied carelessly between them: `S
 is already in milliseconds, so it must **not** be multiplied by 1000 the way the APM query is; and
 the average is taken over successful checks only, or a timed-out check inflates it.
 
-Because the measurements differ, so do the thresholds. Control Tower's error band counts *failed
+Because the measurements differ, so do the thresholds. frontend application name's error band counts *failed
 checks* — single digits — where the API's counts error occurrences in the hundreds. Sharing one
 band would leave one of them permanently green.
 
-### What Control Tower's numbers do and do not mean
+### What Frontend application's numbers do and do not mean
 
 The monitors are `SIMPLE` ping checks: one HTTP request, no browser, no JavaScript, no assets. So
-Control Tower here means **the URL answers, and how quickly** — not that the interface works.
+frontend application name here means **the URL answers, and how quickly** — not that the interface works.
 There is no LCP, CLS or JavaScript-error data, and no real user traffic. The subtitle says so on
 screen for the same reason. Real frontend health would need the Browser agent.
 
@@ -79,13 +76,13 @@ tooltip on each figure names which one set it. Per-provider detail appears when 
 application is selected, which is why the provider filter hides itself in the combined view.
 
 Provider names differ between the two sources — the API reports `AWS` and `AWS (west-2)`, the
-monitors `Ping: Control Tower - AWS EU Prod` and so on. Each application's `hostLabels` maps them
+monitors `Ping: frontend application name - AWS EU Prod` and so on. Each application's `hostLabels` maps them
 onto one canonical set (`AWS EU`, `AWS US`, `OVH`, `Swisscom`, `T-Systems`) so the two line up.
 
 **Settings → Discover APM apps** lists every APM application in the account with its GUID, so you
 can confirm which is which and tick the right ones for the service you are viewing. If the
 entity names are long, the **host label map** renames them for display, e.g.
-`{"data-center-api-prod-ovh": "OVH"}`.
+`{"application name": "host name"}`.
 
 **Test connection** pings the account and, if the region is wrong, tries the other one and switches.
 
@@ -212,7 +209,7 @@ download.
 Three top-level sections:
 
 - **Overview** — the weekly KPI matrix, the landing view
-- **Operations** — Data-Center-Api, with **History** and **Trends** as sub-tabs
+- **Operations** — backend application, with **History** and **Trends** as sub-tabs
 - **Delivery** — the Jira numbers
 
 Operations carries its own bar directly under the section links: **History / Trends** on the left
@@ -758,11 +755,6 @@ python3 fetch_officevibe.py                     # url from config.json
 python3 fetch_officevibe.py --file copy.json    # or a copy on disk
 ```
 
-**No credentials.** The Workleap API needs an admin key and the portal needs a browser session;
-this needs neither, because someone else already did that work and published the result. The URL
-lives in `officevibe.url` and is inside the EQS network, so the fetch has to run somewhere that can
-reach it — your laptop or the runner, not an external machine.
-
 **The weeks already line up.** The export is keyed by ISO week, Monday to Sunday, the same spine
 this dashboard uses, so no date juggling is needed. The fetcher still recomputes the key from each
 row's `start` date rather than trusting the `period` string, so a file generated with a different
@@ -862,9 +854,6 @@ try the test runner instead, change that one value, or override `RUNNER_TAG` in 
 Do **not** write `tags: [build, test]` expecting either runner to pick it up. GitLab treats a tag
 list as AND: it requires a single runner carrying *both* tags, so if build and test are separate
 runners the job matches none of them and stays pending indefinitely.
-
-Pages sites on this instance follow `https://<group>.pages.eqs.tools/<project>`; confirm yours
-under Deploy → Pages after the first successful pipeline.
 
 The snapshot contains only the weekly figures plus thresholds and host labels for rendering — no
 API key, no NRQL, and no entity GUIDs. If some weeks fail, the rest are still published and the
