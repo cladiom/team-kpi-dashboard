@@ -1,0 +1,499 @@
+{
+  "cfgVersion": 56,
+  "team": {
+    "name": "Foundation Enablement Team",
+    "shortName": "Foundation Enablement",
+    "title": "Foundation Enablement Team Dashboard"
+  },
+  "region": "EU",
+  "accountId": "3159470",
+  "timezone": "Europe/Berlin",
+  "weeks": 52,
+  "defaultApplication": "data-center-api",
+  "applications": [
+    {
+      "id": "data-center-api",
+      "name": "Data-Center-Api",
+      "kind": "apm",
+      "role": "backend",
+      "source": "APM — real request traffic",
+      "hostAttribute": "entity.name",
+      "entityGuids": [
+        "MzE1OTQ3MHxBUE18QVBQTElDQVRJT058NDY2Njk5ODI4",
+        "MzE1OTQ3MHxBUE18QVBQTElDQVRJT058NDM1NTY4ODAy",
+        "MzE1OTQ3MHxBUE18QVBQTElDQVRJT058NTMyOTc4NzA4",
+        "MzE1OTQ3MHxBUE18QVBQTElDQVRJT058NDY2NzAyNTQ0",
+        "MzE1OTQ3MHxBUE18QVBQTElDQVRJT058NDY2Njk5OTEx"
+      ],
+      "hostLabels": {},
+      "thresholds": {
+        "uptime": {
+          "good": 99.9,
+          "warn": 99.89,
+          "higherIsBetter": true
+        },
+        "responseMs": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 249,
+              "state": "good",
+              "label": "0-249 ms"
+            },
+            {
+              "from": 250,
+              "to": 299,
+              "state": "warn",
+              "label": "250-299 ms"
+            },
+            {
+              "from": 300,
+              "state": "bad",
+              "label": "300 ms and above"
+            }
+          ]
+        },
+        "errorRate": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 0.001,
+              "state": "good",
+              "label": "0-0.001%"
+            },
+            {
+              "from": 0.001,
+              "to": 0.01,
+              "state": "warn",
+              "label": "0.001-0.01%"
+            },
+            {
+              "from": 0.01,
+              "state": "bad",
+              "label": "above 0.01%"
+            }
+          ]
+        },
+        "errors": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 49,
+              "state": "good",
+              "label": "0-49"
+            },
+            {
+              "from": 50,
+              "to": 999,
+              "state": "warn",
+              "label": "50-999"
+            },
+            {
+              "from": 1000,
+              "state": "bad",
+              "label": "1000 and above"
+            }
+          ]
+        },
+        "alerts": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 0,
+              "state": "good",
+              "label": "none"
+            },
+            {
+              "from": 1,
+              "to": 3,
+              "state": "warn",
+              "label": "1-3"
+            },
+            {
+              "from": 4,
+              "state": "bad",
+              "label": "more than 3"
+            }
+          ]
+        }
+      },
+      "nrql": {
+        "uptime": "SELECT 100 - (count(apm.service.error.count) / count(apm.service.transaction.duration) * 100) AS value FROM Metric WHERE entity.guid IN ({{GUIDS}}) {{RANGE}}",
+        "responseMs": "SELECT average(apm.service.transaction.duration) * 1000 AS value FROM Metric WHERE entity.guid IN ({{GUIDS}}) AND transactionType = 'Web' {{RANGE}}",
+        "errors": "SELECT sum(newrelic.error.group.occurrences) AS value FROM Metric WHERE metricName = 'newrelic.error.group.occurrences' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) {{RANGE}}",
+        "errorRate": "SELECT count(apm.service.error.count) / count(apm.service.transaction.duration) * 100 AS value FROM Metric WHERE entity.guid IN ({{GUIDS}}) {{RANGE}}",
+        "alerts": "SELECT count(*) AS value FROM NrAiIncident WHERE event = 'open' AND priority = 'critical' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) {{RANGE}}",
+        "perHost": "SELECT count(apm.service.transaction.duration) AS throughput, average(apm.service.transaction.duration) * 1000 AS responseMs, count(apm.service.error.count) AS errorEvents FROM Metric WHERE entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+        "perHostErrors": "SELECT sum(newrelic.error.group.occurrences) AS errors FROM Metric WHERE metricName = 'newrelic.error.group.occurrences' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+        "perHostAlerts": "SELECT count(*) AS alerts FROM NrAiIncident WHERE event = 'open' AND priority = 'critical' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+        "topErrors": "SELECT sum(newrelic.error.group.occurrences) AS count FROM Metric WHERE metricName = 'newrelic.error.group.occurrences' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) FACET `error.group.message`, `error.group.name`, {{HOST_ATTR}}, `entity.guid` {{RANGE}} LIMIT 12"
+      },
+      "enabled": true
+    },
+    {
+      "id": "control-tower",
+      "name": "Control Tower",
+      "kind": "synthetic",
+      "role": "frontend",
+      "source": "Synthetics ping — URL reachability only, not user experience",
+      "hostAttribute": "monitorName",
+      "entityGuids": [
+        "MzE1OTQ3MHxTWU5USHxNT05JVE9SfGU1NzVhYmNmLTM0NjYtNDkzZS04NDQ5LTcwZTIwYzQ5ZmJkNA",
+        "MzE1OTQ3MHxTWU5USHxNT05JVE9SfGQzNjU5MTZlLTk3ZmMtNDAyZC05MWQzLWI5ODFjZTdlNjc5Mg",
+        "MzE1OTQ3MHxTWU5USHxNT05JVE9SfDA3MjQwZTU5LWJiM2YtNGE5YS05YmYyLThhNzljOGRkNzM2OQ",
+        "MzE1OTQ3MHxTWU5USHxNT05JVE9SfDNmOGNiOGZiLTY3MTMtNDg1Ni1iZTY4LTljZDA3MTgxNDRiNw",
+        "MzE1OTQ3MHxTWU5USHxNT05JVE9SfGM4MmNmMzgzLThmM2QtNGM5OS05ZGEzLTQyNjA5YzlhMmQ5Mg"
+      ],
+      "hostLabels": {
+        "Ping: Control Tower - AWS EU Prod": "AWS EU",
+        "Ping: Control Tower - AWS US Prod": "AWS US",
+        "Ping: Control Tower - OVH Prod": "OVH",
+        "Ping: Control Tower - Swisscom Prod": "Swisscom",
+        "Ping: Control Tower - T-Systems Prod": "T-Systems"
+      },
+      "thresholds": {
+        "uptime": {
+          "good": 99.9,
+          "warn": 99.5,
+          "higherIsBetter": true
+        },
+        "responseMs": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 499,
+              "state": "good",
+              "label": "0-499 ms"
+            },
+            {
+              "from": 500,
+              "to": 999,
+              "state": "warn",
+              "label": "500-999 ms"
+            },
+            {
+              "from": 1000,
+              "state": "bad",
+              "label": "1000 ms and above"
+            }
+          ]
+        },
+        "errors": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 0,
+              "state": "good",
+              "label": "no failed checks"
+            },
+            {
+              "from": 1,
+              "to": 5,
+              "state": "warn",
+              "label": "1-5 failed checks"
+            },
+            {
+              "from": 6,
+              "state": "bad",
+              "label": "more than 5 failed checks"
+            }
+          ]
+        },
+        "errorRate": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 0.1,
+              "state": "good",
+              "label": "0-0.1%"
+            },
+            {
+              "from": 0.1,
+              "to": 0.5,
+              "state": "warn",
+              "label": "0.1-0.5%"
+            },
+            {
+              "from": 0.5,
+              "state": "bad",
+              "label": "above 0.5%"
+            }
+          ]
+        },
+        "alerts": {
+          "higherIsBetter": false,
+          "bands": [
+            {
+              "from": 0,
+              "to": 0,
+              "state": "good",
+              "label": "none"
+            },
+            {
+              "from": 1,
+              "to": 3,
+              "state": "warn",
+              "label": "1-3"
+            },
+            {
+              "from": 4,
+              "state": "bad",
+              "label": "more than 3"
+            }
+          ]
+        }
+      },
+      "nrql": {
+        "uptime": "SELECT percentage(count(*), WHERE result = 'SUCCESS') AS value FROM SyntheticCheck WHERE entityGuid IN ({{GUIDS}}) {{RANGE}}",
+        "responseMs": "SELECT average(duration) AS value FROM SyntheticCheck WHERE entityGuid IN ({{GUIDS}}) AND result = 'SUCCESS' {{RANGE}}",
+        "errors": "SELECT filter(count(*), WHERE result != 'SUCCESS') AS value FROM SyntheticCheck WHERE entityGuid IN ({{GUIDS}}) {{RANGE}}",
+        "errorRate": "SELECT percentage(count(*), WHERE result != 'SUCCESS') AS value FROM SyntheticCheck WHERE entityGuid IN ({{GUIDS}}) {{RANGE}}",
+        "alerts": "SELECT count(*) AS value FROM NrAiIncident WHERE event = 'open' AND priority = 'critical' AND entity.guid IN ({{GUIDS}}) {{RANGE}}",
+        "perHost": "SELECT count(*) AS throughput, average(duration) AS responseMs, filter(count(*), WHERE result != 'SUCCESS') AS errorEvents FROM SyntheticCheck WHERE entityGuid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+        "perHostErrors": "SELECT filter(count(*), WHERE result != 'SUCCESS') AS errors FROM SyntheticCheck WHERE entityGuid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+        "perHostAlerts": "SELECT count(*) AS alerts FROM NrAiIncident WHERE event = 'open' AND priority = 'critical' AND entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20"
+      },
+      "enabled": false,
+      "_disabledNote": "Parked. Ping monitors only tell us the URL answers, not that the UI works; re-enable by setting enabled to true."
+    }
+  ],
+  "monitorNames": [],
+  "jira": {
+    "site": "https://eqsgroupcloud.atlassian.net",
+    "projectKey": "FET",
+    "boardId": 2359,
+    "_note": "Only metrics that need no further definition are here. Story points, planned, cycle time, aged bugs, escalation hours and capacity are deliberately absent — see the README.",
+    "metrics": [
+      {
+        "key": "bugsCreated",
+        "label": "New bugs",
+        "section": "Bug fixes (metrics)",
+        "jql": "project = {{PROJECT}} AND issuetype = Bug AND created >= \"{{FROM}}\" AND created < \"{{TO}}\"",
+        "mode": "weekly",
+        "short": "New bugs"
+      },
+      {
+        "key": "bugsResolved",
+        "label": "Resolved bugs",
+        "section": "Bug fixes (metrics)",
+        "jql": "project = {{PROJECT}} AND issuetype = Bug AND resolved >= \"{{FROM}}\" AND resolved < \"{{TO}}\"",
+        "mode": "weekly",
+        "short": "Resolved bugs"
+      },
+      {
+        "key": "bugsOpen",
+        "label": "Open bug tickets",
+        "short": "Open",
+        "section": "Bug fixes (metrics)",
+        "mode": "pointInTime",
+        "jql": "project = {{PROJECT}} AND issuetype = Bug AND statusCategory != Done"
+      },
+      {
+        "key": "bugsHighAged90",
+        "label": "High priority bugs older than 90 days",
+        "section": "Bug fixes (metrics)",
+        "mode": "pointInTime",
+        "_note": "Describes the backlog as it stands when the fetch runs. Past weeks cannot be reconstructed, so history accumulates from the first run.",
+        "jql": "project = {{PROJECT}} AND issuetype = Bug AND statusCategory != Done AND priority = High AND created <= -90d",
+        "short": "High, >90d"
+      },
+      {
+        "key": "bugsMediumAged90",
+        "label": "Medium priority bugs older than 90 days",
+        "section": "Bug fixes (metrics)",
+        "mode": "pointInTime",
+        "_note": "Describes the backlog as it stands when the fetch runs. Past weeks cannot be reconstructed, so history accumulates from the first run.",
+        "jql": "project = {{PROJECT}} AND issuetype = Bug AND statusCategory != Done AND priority = Medium AND created <= -90d",
+        "short": "Medium, >90d"
+      },
+      {
+        "key": "openTickets",
+        "label": "Tickets in Jira (all types, unresolved)",
+        "section": "Delivery & Cycle time",
+        "mode": "pointInTime",
+        "jql": "project = {{PROJECT}} AND statusCategory != Done",
+        "short": "Open tickets"
+      },
+      {
+        "key": "sprintPlanned",
+        "label": "Planned at sprint start",
+        "section": "Delivery & Cycle time",
+        "mode": "sprint",
+        "field": "planned",
+        "note": "Issues in the sprint report minus those added after the sprint began.",
+        "short": "Planned"
+      },
+      {
+        "key": "sprintAdded",
+        "label": "Added after sprint start",
+        "section": "Delivery & Cycle time",
+        "mode": "sprint",
+        "field": "added",
+        "note": "Issues the sprint report lists as added once the sprint was running.",
+        "short": "Added"
+      },
+      {
+        "key": "ticketsResolved",
+        "label": "Tickets resolved",
+        "section": "Delivery & Cycle time",
+        "jql": "project = {{PROJECT}} AND resolved >= \"{{FROM}}\" AND resolved < \"{{TO}}\"",
+        "mode": "weekly",
+        "short": "Resolved"
+      },
+      {
+        "key": "capacityAvailable",
+        "label": "Capacity available (person-weeks)",
+        "section": "Delivery & Cycle time",
+        "mode": "capacity",
+        "note": "Each person's available share of the week, 100% = 1, summed across the team.",
+        "short": "Capacity",
+        "unit": "person-weeks"
+      },
+      {
+        "key": "cycleTimeDays",
+        "label": "Cycle time, median (days)",
+        "section": "Delivery & Cycle time",
+        "mode": "cycleTime",
+        "note": "In Progress to resolved, median over the issues resolved that week.",
+        "short": "Cycle time",
+        "unit": "days"
+      },
+      {
+        "key": "techDebtCreated",
+        "label": "New tech debt tickets",
+        "short": "New tickets",
+        "section": "Tech Debt",
+        "mode": "weekly",
+        "jql": "project = {{PROJECT}} AND {{TECHDEBT}} AND created >= \"{{FROM}}\" AND created < \"{{TO}}\""
+      },
+      {
+        "key": "techDebtResolved",
+        "label": "Resolved tech debt tickets",
+        "short": "Resolved",
+        "section": "Tech Debt",
+        "mode": "weekly",
+        "jql": "project = {{PROJECT}} AND {{TECHDEBT}} AND resolved >= \"{{FROM}}\" AND resolved < \"{{TO}}\""
+      },
+      {
+        "key": "techDebtOpen",
+        "label": "Open tech debt tickets",
+        "short": "Open",
+        "section": "Tech Debt",
+        "mode": "pointInTime",
+        "jql": "project = {{PROJECT}} AND {{TECHDEBT}} AND statusCategory != Done"
+      },
+      {
+        "key": "techDebtHighAged90",
+        "label": "High priority tech debt older than 90 days",
+        "short": "High, >90d",
+        "section": "Tech Debt",
+        "mode": "pointInTime",
+        "jql": "project = {{PROJECT}} AND {{TECHDEBT}} AND statusCategory != Done AND priority = High AND created <= -90d"
+      },
+      {
+        "key": "techDebtMediumAged90",
+        "label": "Medium priority tech debt older than 90 days",
+        "short": "Medium, >90d",
+        "section": "Tech Debt",
+        "mode": "pointInTime",
+        "jql": "project = {{PROJECT}} AND {{TECHDEBT}} AND statusCategory != Done AND priority = Medium AND created <= -90d"
+      }
+    ],
+    "capacity": {
+      "cloudId": null,
+      "people": [],
+      "mode": "allocation",
+      "counts": [
+        "Available"
+      ],
+      "hoursPerWeek": 40,
+      "daysPerWeek": 5,
+      "baseline": {},
+      "url": "https://eqsgroupcloud.atlassian.net/jira/software/projects/FET/boards/2359/capacity/people"
+    },
+    "cycleTime": {
+      "start": "last",
+      "startStatuses": [
+        "In Progress"
+      ],
+      "startStatusIds": []
+    },
+    "techDebt": {
+      "field": "Engineering Capacity Category",
+      "value": "Tech Debt"
+    }
+  },
+  "officevibe": {
+    "url": "https://engineering-ai-adoption-impact-dashboard-63c28e.pages.eqs.tools/workleap/teams/foundation-enablement.json",
+    "team": "Foundation - Enablement",
+    "thresholds": {
+      "ovParticipationRate": {
+        "bands": [
+          {
+            "to": 49,
+            "state": "bad",
+            "label": "under half the team answered"
+          },
+          {
+            "from": 50,
+            "to": 66,
+            "state": "warn",
+            "label": "50-66%, below the 66% target"
+          },
+          {
+            "from": 66,
+            "state": "good",
+            "label": "above 66%"
+          }
+        ]
+      },
+      "ovEnps": {
+        "bands": [
+          {
+            "to": -1,
+            "state": "bad",
+            "label": "negative — more detractors than promoters"
+          },
+          {
+            "from": 0,
+            "to": 10,
+            "state": "warn",
+            "label": "0-10, below the target of 10"
+          },
+          {
+            "from": 10,
+            "state": "good",
+            "label": "above 10"
+          }
+        ]
+      },
+      "ovEngagement": {
+        "bands": [
+          {
+            "to": 5.9,
+            "state": "bad",
+            "label": "below 6.0"
+          },
+          {
+            "from": 6,
+            "to": 7,
+            "state": "warn",
+            "label": "6.0-7.0, below the 7.0 target"
+          },
+          {
+            "from": 7,
+            "state": "good",
+            "label": "above 7.0"
+          }
+        ]
+      }
+    }
+  }
+}

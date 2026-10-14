@@ -1,0 +1,3270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weekly Ops Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5fd9'/%3E%3Cpath d='M4 19h5l3-7 4 11 3-6 2 2h7' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='25' cy='8' r='2.6' fill='%2342c98a'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#2b5fd9">
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7f9; --panel:#ffffff; --panel-2:#fbfbfc; --ink:#14171a; --ink-2:#5b636b;
+    --ink-3:#8a9299; --line:#e3e6ea; --line-2:#eef0f3;
+    --good:#0f8a52; --good-bg:#e6f5ec; --warn:#a66a00; --warn-bg:#fdf3e0;
+    --bad:#c0392b; --bad-bg:#fdecea; --accent:#2b5fd9; --accent-bg:#eaf0fe;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 4px 12px rgba(16,24,40,.05);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg:#0e1116; --panel:#161b22; --panel-2:#1b212a; --ink:#e8edf3; --ink-2:#9aa5b1;
+      --ink-3:#6e7a87; --line:#262d36; --line-2:#1f252e;
+      --good:#42c98a; --good-bg:#11291f; --warn:#e0a44a; --warn-bg:#2a2013;
+      --bad:#ef6d60; --bad-bg:#2c1717; --accent:#6f9bff; --accent-bg:#161f33;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#0e1116; --panel:#161b22; --panel-2:#1b212a; --ink:#e8edf3; --ink-2:#9aa5b1;
+    --ink-3:#6e7a87; --line:#262d36; --line-2:#1f252e;
+    --good:#42c98a; --good-bg:#11291f; --warn:#e0a44a; --warn-bg:#2a2013;
+    --bad:#ef6d60; --bad-bg:#2c1717; --accent:#6f9bff; --accent-bg:#161f33;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+  button{font:inherit;color:inherit}
+
+  .wrap{max-width:1320px;margin:0 auto;padding-block:20px 56px;padding-left:20px;padding-right:20px}
+
+  header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+  .titlerow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand h1{margin:0;font-size:20px;letter-spacing:-.2px}
+  .hdrsel{width:auto;padding:5px 10px;font:inherit;font-size:13px;font-weight:500;
+    color:var(--ink);border:1px solid var(--line);border-radius:8px;background:var(--panel);
+    box-shadow:var(--shadow);cursor:pointer;max-width:280px}
+  .hdrsel:hover{border-color:var(--ink-3)}
+  .hdrsel:disabled{opacity:.5;cursor:default}
+  .hdrsel > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .brand p{margin:3px 0 0;color:var(--ink-2);font-size:12.5px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;
+    padding:7px 12px;font-size:13px;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap}
+  .btn:hover{border-color:var(--ink-3)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.sm{padding:4px 9px;font-size:12px;box-shadow:none}
+  .btn.iconbtn{width:34px;height:33px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+  .btn.iconbtn svg{width:16px;height:16px;display:block}
+  .btn:disabled{opacity:.5;cursor:default}
+
+  .banner{border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:13px;
+    border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow)}
+  .banner.warn{border-color:color-mix(in srgb, var(--warn) 45%, var(--line));background:var(--warn-bg);color:var(--warn)}
+  .banner.bad{border-color:color-mix(in srgb, var(--bad) 45%, var(--line));background:var(--bad-bg);color:var(--bad)}
+  .banner.good{border-color:color-mix(in srgb, var(--good) 45%, var(--line));background:var(--good-bg);color:var(--good)}
+  .banner code{font-family:var(--mono);font-size:12px}
+  .banner .acts{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:7px}
+  .kpi .val{font-size:25px;font-weight:600;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.15}
+  .kpi .sub{margin-top:5px;font-size:12px;color:var(--ink-2);display:flex;gap:6px;align-items:center}
+  .kpi .sofar{color:var(--ink-3);font-size:11px}
+  .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .s-good{color:var(--good)} .s-warn{color:var(--warn)} .s-bad{color:var(--bad)}
+  .bg-good{background:var(--good)} .bg-warn{background:var(--warn)} .bg-bad{background:var(--bad)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+  .card > .head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+    padding:13px 16px;border-bottom:1px solid var(--line)}
+  .card > .head h2{margin:0;font-size:14px;letter-spacing:-.1px}
+  .card > .head .note{font-size:12px;color:var(--ink-3)}
+  .scroller{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:right;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--line-2)}
+  th:first-child,td:first-child,th.l,td.l{text-align:left}
+  thead th{position:sticky;top:0;background:var(--panel-2);font-size:11px;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--line);z-index:1;vertical-align:bottom}
+  /* sparkline sits flush with the right edge of its column, like the numbers */
+  thead th .spark{display:block;margin:6px 0 1px auto;max-width:100%}
+  /* the unit belongs with the heading, not in every cell */
+  thead th .u{display:block;font-size:9.5px;letter-spacing:.03em;color:var(--ink-3);
+    text-transform:none;font-weight:500;margin-top:1px}
+  /* the delivery table carries more columns than the ops one, so it is allowed
+     to be tighter and to wrap a heading rather than force a sideways scroll */
+  #dvTable th,#dvTable td{padding:8px 9px}
+  #dvTable thead th{white-space:normal;max-width:108px;font-size:10.5px}
+  #dvTable td.num{font-size:12px}
+  thead th.l .spark{margin-left:0}
+  tbody tr:hover{background:var(--panel-2)}
+  tbody tr.current{background:var(--accent-bg)}
+  td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+  .pill.good{background:var(--good-bg);color:var(--good)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn)}
+  .pill.bad{background:var(--bad-bg);color:var(--bad)}
+  .pill.none{color:var(--ink-3)}
+  /* a red number that can explain itself */
+  .why{position:relative;cursor:help}
+  .why:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  .whypop{position:absolute;z-index:70;width:420px;max-width:calc(100vw - 20px);
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.18);padding:10px 12px;text-align:left;
+    opacity:0;transform:translateY(-3px);transition:opacity .13s ease,transform .13s ease}
+  .whypop.in{opacity:1;transform:none}
+  .whypop.out{opacity:0;transform:translateY(-3px)}
+  @media (prefers-reduced-motion:reduce){
+    .whypop{transition:none;transform:none}
+    .whypop.in,.whypop.out{transform:none}
+  }
+  .whypop .nhead{font-size:11px;color:var(--ink-3);margin-bottom:7px}
+  .whypop .whyrow{display:flex;gap:9px;align-items:flex-start;padding:5px 0;
+    border-top:1px solid var(--line-2)}
+  .whypop .whyrow:first-of-type{border-top:0}
+  .whypop .whyn{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);
+    min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
+  .whypop .whym{font-size:12.5px;line-height:1.4;word-break:break-word}
+  .whypop .whym a{color:var(--accent)}
+  .whypop .whyc{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);
+    margin-top:2px}
+  .whypop .nfoot{margin-top:8px}
+  .whypop .nwho{font-size:10.5px;color:var(--ink-3);line-height:1.35}
+
+  .wk{font-weight:600}
+  .dates{color:var(--ink-2);font-size:12px}
+  /* a week row toggles its applications open; host rows are real rows in the
+     same table, so every value stays under its own column heading */
+  tbody tr.wkrow{cursor:pointer}
+  .exp{border:0;background:transparent;cursor:pointer;color:var(--ink-3);
+    padding:1px 4px;border-radius:5px;font-size:11px;line-height:1;vertical-align:middle}
+  .exp:hover{background:var(--line-2);color:var(--ink)}
+  .exp:disabled{opacity:.25;cursor:default}
+  .exp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .chev{display:inline-block;transition:transform .15s}
+  tr.wkrow[data-open="1"] .chev{transform:rotate(90deg)}
+  tbody tr.hostrow td{background:var(--panel-2);font-size:12.5px;color:var(--ink-2)}
+  tbody tr.hostrow:hover td{background:var(--panel-2)}
+  tbody tr.hostrow td:first-child{padding-left:38px}
+  tbody tr.hostrow.last td{border-bottom:1px solid var(--line)}
+  .chip{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--line-2);color:var(--ink-3);font-family:var(--mono)}
+  .empty{padding:34px 16px;text-align:center;color:var(--ink-3);font-size:13px}
+
+  .scrim{position:fixed;inset:0;background:rgba(10,12,16,.45);z-index:40}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--panel);
+    border-left:1px solid var(--line);z-index:41;display:flex;flex-direction:column}
+  .drawer .dhead{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 18px;border-bottom:1px solid var(--line);padding-top:calc(14px + env(safe-area-inset-top,0px))}
+  .drawer .dhead h2{margin:0;font-size:15px}
+  .drawer .dbody{overflow-y:auto;padding:16px 18px 24px;flex:1}
+  .drawer .dfoot{border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  fieldset{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 16px}
+  legend{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);padding:0 6px}
+  label{display:block;margin-bottom:12px;font-size:12.5px;color:var(--ink-2)}
+  label > span.t{display:block;margin-bottom:4px;color:var(--ink);font-weight:500}
+  label > span.h{display:block;margin-top:4px;color:var(--ink-3);font-size:11.5px}
+  input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;
+    background:var(--panel-2);color:var(--ink);font:inherit;font-size:13px}
+  textarea{font-family:var(--mono);font-size:12px;min-height:66px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  details.adv{margin-bottom:16px}
+  details.adv > summary{cursor:pointer;font-size:12.5px;color:var(--accent);margin-bottom:10px}
+  .inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-4px 0 12px}
+  .status{font-size:12px}
+
+  .entlist{border:1px solid var(--line);border-radius:8px;max-height:230px;overflow:auto;background:var(--panel-2)}
+  .entlist .ent{display:flex;gap:9px;align-items:flex-start;padding:7px 10px;border-bottom:1px solid var(--line-2);font-size:12.5px}
+  .entlist .ent:last-child{border-bottom:0}
+  .entlist .ent input{width:auto;margin-top:3px;flex:0 0 auto}
+  .entlist .ent .meta{color:var(--ink-3);font-size:11px;font-family:var(--mono);word-break:break-all}
+
+  pre.diag{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    font-family:var(--mono);font-size:11.5px;white-space:pre-wrap;word-break:break-word;margin:0 0 12px;max-height:280px;overflow:auto}
+  .diagq{margin-bottom:18px}
+  .diagq h3{margin:0 0 6px;font-size:12.5px;display:flex;gap:8px;align-items:center}
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+  .tabs button{border:0;background:transparent;padding:9px 14px;font-size:13.5px;cursor:pointer;
+    color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:6px 6px 0 0}
+  .tabs button:hover{color:var(--ink);background:var(--panel-2)}
+  .tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+
+  .opsbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-8px 0 16px}
+  .chartopts .dropdown{margin-left:2px}
+  .opsfill{flex:1 1 auto}
+  .subtabs{display:flex;gap:4px}
+  .subtabs button{border:1px solid var(--line);background:var(--panel);padding:5px 12px;
+    font-size:12.5px;cursor:pointer;color:var(--ink-2);border-radius:999px}
+  .subtabs button:hover{color:var(--ink);border-color:var(--ink-3)}
+  .subtabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);
+    border-color:color-mix(in srgb, var(--accent) 35%, var(--line));font-weight:500}
+  /* Three levels of navigation on one screen, so each gets its own shape
+     rather than three rows of similar pills:
+       section  (Overview / Operations / Delivery)  underlined tabs
+       topic    (Bug fixes / Delivery & Cycle time) a segmented control
+       view     (History / Trends)                  small pills
+     The topic sits above the view because it decides what the view is of, and
+     both start at the left margin so the eye reads straight down. */
+  .topics{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;margin:-6px 0 12px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+  .topics button{border:0;background:transparent;padding:6px 14px;font-size:13px;
+    cursor:pointer;color:var(--ink-2);border-radius:7px;font-weight:500;white-space:nowrap}
+  .topics button:hover{color:var(--ink)}
+  .topics button[aria-selected="true"]{background:var(--panel);color:var(--ink);font-weight:600;
+    box-shadow:0 1px 2px rgba(0,0,0,.09)}
+  @media (max-width:560px){ .topics{display:flex} .topics button{flex:1 1 auto} }
+
+  /* weekly matrix: KPIs down, calendar weeks across */
+  #mxTable{border-collapse:separate;border-spacing:0;font-size:12px}
+  #mxTable th,#mxTable td{padding:4px 8px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+  #mxTable thead th{position:sticky;top:0;z-index:3;background:var(--panel-2);font-size:10.5px;
+    letter-spacing:.02em;text-align:right;font-weight:600}
+  #mxTable .rowlab{position:sticky;left:0;z-index:2;background:var(--panel);text-align:left;
+    font-weight:400;color:var(--ink-2);min-width:210px;border-right:1px solid var(--line)}
+  #mxTable thead .rowlab{z-index:4;background:var(--panel-2)}
+  #mxTable tr.grp td{background:var(--panel-2);font-weight:600;color:var(--ink);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  #mxTable tr.grp .rowlab{background:var(--panel-2)}
+  #mxTable td.v{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:11.5px}
+  #mxTable td.good{background:var(--good-bg);color:var(--good)}
+  #mxTable td.warn{background:var(--warn-bg);color:var(--warn)}
+  #mxTable td.bad{background:var(--bad-bg);color:var(--bad)}
+  #mxTable td.none{color:var(--ink-3)}
+  #mxTable tr.cur th,#mxTable tr.cur td{background:var(--accent-bg)}
+
+  /* charts */
+  /* exactly two per row — auto-fit would squeeze in a third on a wide screen */
+  .chartgrid{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:760px){ .chartgrid{grid-template-columns:minmax(0,1fr)} }
+  .chartcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .chartcard > .head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;
+    padding:13px 16px 9px}
+  .chartcard > .head h2{margin:0;font-size:14px}
+  .chartcard > .head .note{font-size:11.5px;color:var(--ink-3)}
+  .plot{position:relative;padding:0 10px 4px}
+  .plot svg{display:block;width:100%;height:auto;overflow:visible}
+  .plot .grid line{stroke:var(--line-2)}
+  .plot .axis line{stroke:var(--line)}
+  .plot text{fill:var(--ink-3);font-size:10px;font-family:var(--mono)}
+  .plot .thr{stroke:var(--ink-3);stroke-dasharray:3 4;opacity:.55}
+  .plot .thrlbl{fill:var(--ink-3);font-size:9px}
+  .plot .hit{fill:transparent;cursor:crosshair}
+  .plot .cross{stroke:var(--ink-3);stroke-dasharray:2 3;opacity:.7}
+  .tip{position:absolute;pointer-events:none;z-index:5;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;box-shadow:var(--shadow);padding:8px 10px;font-size:12px;min-width:170px;transform:translate(-50%,0)}
+  .tip .th{font-weight:600;margin-bottom:5px;font-size:12px}
+  .tip .r{display:flex;align-items:center;gap:7px;justify-content:space-between;line-height:1.55}
+  .tip .r .nm{display:flex;align-items:center;gap:6px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tip .r .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px}
+  .sw{width:9px;height:3px;border-radius:2px;flex:0 0 auto}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;padding:4px 16px 14px}
+  .legend button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel-2);
+    border-radius:999px;padding:3px 10px;font-size:11.5px;cursor:pointer;color:var(--ink-2)}
+  .legend button[aria-pressed="false"]{opacity:.4}
+  .legend button:hover{border-color:var(--ink-3)}
+  .chartopts{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:16px;font-size:12.5px;color:var(--ink-2)}
+  .chartopts label{display:flex;align-items:center;gap:6px;margin:0}
+  .chartopts input[type=checkbox]{width:auto}
+  .chartopts select{width:auto;padding:4px 8px;font-size:12.5px}
+  .fsep{width:1px;align-self:stretch;background:var(--line);margin:0 2px}
+  .chartopts .resetbtn{margin-left:auto}
+  .flabel{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .derived{font-style:italic}
+  .infoi{display:inline-flex;align-items:center;vertical-align:-2px;margin-left:5px;
+    color:var(--ink-3);text-decoration:none}
+  .infoi:hover{color:var(--accent)}
+  .infoi svg{width:13px;height:13px;display:block}
+  .dvlink{color:inherit;text-decoration:underline dotted var(--ink-3);text-underline-offset:3px}
+  .dvlink:hover{color:var(--accent);text-decoration-color:var(--accent)}
+
+  /* applications dropdown */
+  .dropdown{position:relative;display:inline-block}
+  .ddbtn{display:inline-flex;align-items:center;gap:8px}
+  .ddbtn .caret{color:var(--ink-3);font-size:10px}
+  .ddbtn[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+  .menu{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:230px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 6px 24px rgba(16,24,40,.14);padding:6px;max-height:320px;overflow:auto}
+  :root[data-theme="dark"] .menu{box-shadow:0 8px 28px rgba(0,0,0,.5)}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .menu{box-shadow:0 8px 28px rgba(0,0,0,.5)} }
+  .menuhead{display:flex;gap:10px;padding:4px 8px 7px;border-bottom:1px solid var(--line-2);margin-bottom:4px}
+  .linkbtn{border:0;background:transparent;color:var(--accent);cursor:pointer;font-size:11.5px;padding:0}
+  .linkbtn:hover{text-decoration:underline}
+  .menu .opt{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;
+    font-size:12.5px;cursor:pointer;margin:0;color:var(--ink)}
+  .menu .opt:hover{background:var(--panel-2)}
+  .menu .opt input{width:auto;margin:0;flex:0 0 auto}
+  .menu .opt .sw{width:10px;height:10px;border-radius:3px}
+  .menu .none{padding:8px;color:var(--ink-3);font-size:12px}
+  .menu button.opt{width:100%;border:0;background:transparent;text-align:left;font:inherit;font-size:12.5px}
+  .menu .tick{width:13px;flex:0 0 auto;color:var(--accent)}
+  .menu .opt .chip{margin-left:auto}
+  .menu button.opt[aria-selected="true"]{font-weight:500}
+
+  .prog{height:3px;background:var(--line-2);border-radius:999px;overflow:hidden;margin-bottom:16px}
+  .prog > i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+  footer.foot{color:var(--ink-3);font-size:12px;text-align:center;margin-top:8px}
+  footer.foot a{color:var(--accent)}
+
+  @media (max-width:640px){ .row2{grid-template-columns:1fr} .kpi .val{font-size:22px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="titlerow">
+        <h1>Weekly Ops Dashboard</h1>
+      </div>
+      <p id="subtitle">weeks run Monday 00:00 to Sunday 23:59 CET</p>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="diagBtn">Diagnostics</button>
+      <button class="btn" id="csvBtn">Export CSV</button>
+      <button class="btn" id="setBtn">Settings</button>
+      <button class="btn primary" id="refreshBtn">Refresh</button>
+      <button class="btn iconbtn" id="themeBtn" aria-label="Switch theme"></button>
+    </div>
+  </header>
+
+  <div class="prog" id="prog" hidden><i></i></div>
+  <div id="banners"></div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="navOverview"   aria-selected="true">Overview</button>
+    <button role="tab" id="navOperations" aria-selected="false">Operations</button>
+    <button role="tab" id="navDelivery"   aria-selected="false">Delivery</button>
+  </nav>
+  <div class="opsbar" id="opsSubtabs" hidden>
+    <nav class="subtabs" role="tablist" aria-label="Operations views">
+      <button role="tab" id="tabBtnHistory" aria-controls="panelHistory" aria-selected="true">History</button>
+      <button role="tab" id="tabBtnTrends"  aria-controls="panelTrends"  aria-selected="false">Trends</button>
+    </nav>
+    <span class="opsfill"></span>
+    <div class="dropdown">
+      <button class="ddbtn hdrsel" id="svcBtn" aria-haspopup="listbox" aria-expanded="false">
+        <span id="svcLabel">Service</span><span class="caret">▾</span>
+          </button>
+      <div class="menu" id="svcMenu" hidden role="listbox" aria-labelledby="svcBtn">
+        <div id="svcList"></div>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="ddbtn hdrsel" id="appsBtn" aria-haspopup="true" aria-expanded="false">
+        <span id="appsLabel">Providers</span><span class="caret">▾</span>
+          </button>
+      <div class="menu" id="appsMenu" hidden role="group" aria-labelledby="appsBtn">
+        <div class="menuhead">
+          <button type="button" class="linkbtn" id="appsAll">Select all</button>
+          <button type="button" class="linkbtn" id="appsNone">Clear</button>
+    </div>
+        <div id="appsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="kpis" id="kpis" hidden></section>
+
+  <section id="panelOverview" role="tabpanel" aria-labelledby="navOverview">
+    <div class="chartopts" id="mxFilters">
+      <label>Weeks
+        <select id="mxRange">
+          <option value="0">all</option>
+          <option value="4">last 4</option>
+          <option value="13">last 13</option>
+          <option value="26" selected>last 26</option>
+          <option value="52">last 52</option>
+        </select>
+      </label>
+      <span class="flabel" id="mxScope"></span>
+    </div>
+    <div class="card">
+      <div class="head">
+        <h2>Weekly KPI matrix</h2>
+        <span class="note" id="mxNote"></span>
+      </div>
+      <div class="scroller"><table id="mxTable"><thead></thead><tbody></tbody></table></div>
+      <div class="empty" id="mxEmpty" hidden></div>
+    </div>
+  </section>
+
+  <section id="panelHistory" role="tabpanel" aria-labelledby="tabBtnHistory" hidden>
+    <div class="chartopts" id="histFilters">
+      <label>Weeks
+        <select id="hfRange">
+          <option value="0" selected>all</option>
+          <option value="4">last 4</option>
+          <option value="13">last 13</option>
+          <option value="26">last 26</option>
+          <option value="52">last 52</option>
+        </select>
+      </label>
+      <button class="btn sm resetbtn" id="hfReset">Reset filters</button>
+    </div>
+    <div class="card">
+      <div class="head">
+        <h2>Week-by-week history</h2>
+        <span class="note" id="histNote"></span>
+      </div>
+      <div class="scroller">
+        <table id="histTable"><thead></thead><tbody></tbody></table>
+      </div>
+      <div class="empty" id="histEmpty">No data yet. Open <strong>Settings</strong> to point this at your New Relic account.</div>
+    </div>
+  </section>
+
+  <section id="panelTrends" role="tabpanel" aria-labelledby="tabBtnTrends" hidden>
+    <div class="chartopts" id="trendFilters">
+      <label>Weeks
+        <select id="optRange">
+          <option value="0">all</option>
+          <option value="4">last 4</option>
+          <option value="13">last 13</option>
+          <option value="26" selected>last 26</option>
+          <option value="52">last 52</option>
+        </select>
+      </label>
+      <span class="fsep"></span>
+      <label><input type="checkbox" id="optTotal" checked> Show combined total</label>
+      <label><input type="checkbox" id="optPartial"> Include the in-progress week</label>
+      <button class="btn sm resetbtn" id="ctReset">Reset filters</button>
+    </div>
+    <div class="chartgrid" id="chartGrid"></div>
+    <div class="empty card" id="trendEmpty" hidden>No data to chart yet — click Refresh.</div>
+  </section>
+
+  <nav class="topics" id="dvTopics" role="tablist" aria-label="Delivery topics" hidden></nav>
+
+  <div class="opsbar" id="dvSubtabs" hidden>
+    <nav class="subtabs" role="tablist" aria-label="Delivery views">
+      <button role="tab" id="dvBtnHistory" aria-controls="panelDeliveryHistory" aria-selected="true">History</button>
+      <button role="tab" id="dvBtnTrends"  aria-controls="panelDeliveryTrends"  aria-selected="false">Trends</button>
+    </nav>
+  </div>
+
+  <section class="kpis" id="dvKpis" hidden></section>
+
+  <section id="panelDeliveryHistory" role="tabpanel" aria-labelledby="dvBtnHistory" hidden>
+    <div class="chartopts" id="dvFilters">
+      <label>Weeks
+        <select id="dvRange">
+          <option value="0">all</option>
+          <option value="4">last 4</option>
+          <option value="13">last 13</option>
+          <option value="26">last 26</option>
+          <option value="52">last 52</option>
+        </select>
+      </label>
+      <span class="flabel" id="dvScope"></span>
+    </div>
+    <div class="card">
+      <div class="head">
+        <h2>Week-by-week history</h2>
+        <span class="note" id="dvNote"></span>
+      </div>
+      <div class="scroller">
+        <table id="dvTable"><thead></thead><tbody></tbody></table>
+      </div>
+      <div class="empty" id="dvEmpty"></div>
+    </div>
+  </section>
+
+  <section id="panelDeliveryTrends" role="tabpanel" aria-labelledby="dvBtnTrends" hidden>
+    <div class="chartopts" id="dvTrendFilters">
+      <label>Weeks
+        <select id="dvcRange">
+          <option value="0">all</option>
+          <option value="4">last 4</option>
+          <option value="13">last 13</option>
+          <option value="26" selected>last 26</option>
+          <option value="52">last 52</option>
+        </select>
+      </label>
+      <span class="fsep"></span>
+      <label><input type="checkbox" id="dvcPartial"> Include the in-progress week</label>
+      <button class="btn sm resetbtn" id="dvcReset">Reset filters</button>
+    </div>
+    <div class="chartgrid" id="dvChartGrid"></div>
+    <div class="empty card" id="dvChartEmpty" hidden></div>
+  </section>
+
+  <footer class="foot">
+    Source dashboard: <a href="https://onenr.io/0qwLP8EKgw5" target="_blank" rel="noreferrer">New Relic</a>
+    &nbsp;&middot;&nbsp; <span id="tzNote"></span>
+  </footer>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+
+<!-- ============ settings ============ -->
+<aside id="drawer" class="drawer" hidden>
+  <div class="dhead"><h2>Settings</h2><button class="btn" id="closeSet">Close</button></div>
+  <div class="dbody">
+    <fieldset>
+      <legend>Account</legend>
+      <div class="row2">
+        <label><span class="t">Account ID</span><input id="f_accountId" inputmode="numeric" placeholder="3159470"></label>
+        <label><span class="t">Region</span>
+          <select id="f_region">
+            <option value="EU">EU (api.eu.newrelic.com)</option>
+            <option value="US">US (api.newrelic.com)</option>
+          </select></label>
+      </div>
+      <div class="inline">
+        <button class="btn sm" id="testBtn">Test connection</button>
+        <span class="status" id="testOut">API key on server: <strong id="keyState">unknown</strong></span>
+      </div>
+      <p style="margin:0;font-size:11.5px;color:var(--ink-3)">
+        The key is never typed here — it is read from <code>api_key.txt</code> next to <code>server.py</code>.
+      </p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Entities (one per host)</legend>
+      <p style="margin:0 0 10px;font-size:11.5px;color:var(--ink-3)">
+        Each provider is its own APM application in New Relic. Pick the five that make up data-center-api.
+      </p>
+      <div class="inline">
+        <button class="btn sm" id="discoverBtn">Discover APM apps</button>
+        <span class="status" id="discoverOut"></span>
+      </div>
+      <div class="entlist" id="entList"><div class="ent"><span class="meta">Not loaded yet — click Discover, or paste GUIDs below.</span></div></div>
+      <label style="margin-top:12px"><span class="t">Entity GUIDs</span><textarea id="f_entityGuids" spellcheck="false" placeholder="one per line"></textarea>
+        <span class="h">One per line. Filled in automatically by Discover; you can also paste them from your dashboard's NRQL.</span></label>
+      <label><span class="t">Host label map (JSON)</span><textarea id="f_hostLabels" spellcheck="false"></textarea>
+        <span class="h">Optional. Renames facet values for display, e.g. <code>{"data-center-api-ovh":"OVH"}</code>. Unmapped values show as-is.</span></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Range</legend>
+      <div class="row2">
+        <label><span class="t">Weeks of history</span><input id="f_weeks" inputmode="numeric" placeholder="12"></label>
+        <label><span class="t">Facet attribute</span><input id="f_hostAttribute" placeholder="entity.name"></label>
+      </div>
+      <label><span class="t">Synthetic monitor name(s) for uptime</span><input id="f_monitorNames" placeholder="leave empty to derive from errors">
+        <span class="h">If set, uptime = % of successful synthetic checks. If empty, uptime = 100 − error rate.</span></label>
+    </fieldset>
+
+    <details class="adv">
+      <summary>Advanced: NRQL templates &amp; thresholds</summary>
+      <fieldset>
+        <legend>NRQL templates</legend>
+        <p style="margin:0 0 12px;font-size:11.5px;color:var(--ink-3)">
+          Placeholders: <code>{{RANGE}}</code> (keep it — becomes the week's SINCE/UNTIL),
+          <code>{{GUIDS}}</code>, <code>{{MONITORS}}</code>, <code>{{HOST_ATTR}}</code>.
+          Single-value queries must alias one column <code>value</code>.
+          Do not add <code>TIMESERIES</code> — each week is queried as one bucket.
+        </p>
+        <label><span class="t">Uptime %</span><textarea id="f_nrql_uptime" spellcheck="false"></textarea></label>
+        <label><span class="t">Avg. web response time (ms)</span><textarea id="f_nrql_responseMs" spellcheck="false"></textarea></label>
+        <label><span class="t">Errors (total)</span><textarea id="f_nrql_errors" spellcheck="false"></textarea></label>
+        <label><span class="t">Error rate (%)</span><textarea id="f_nrql_errorRate" spellcheck="false"></textarea></label>
+        <label><span class="t">Alerts</span><textarea id="f_nrql_alerts" spellcheck="false"></textarea></label>
+        <label><span class="t">Per host — throughput &amp; response</span><textarea id="f_nrql_perHost" spellcheck="false"></textarea>
+          <span class="h">Must FACET and return <code>throughput</code>, <code>responseMs</code>, optionally <code>errorEvents</code>.</span></label>
+        <label><span class="t">Per host — errors</span><textarea id="f_nrql_perHostErrors" spellcheck="false"></textarea>
+          <span class="h">Must FACET on the same attribute and return <code>errors</code>. Merged into the rows above.</span></label>
+        <label><span class="t">Per host — alerts</span><textarea id="f_nrql_perHostAlerts" spellcheck="false"></textarea>
+          <span class="h">Must FACET on the same attribute and return <code>alerts</code>. Applications absent from the result are shown as 0.</span></label>
+      </fieldset>
+      <fieldset>
+        <legend>SLA thresholds (JSON)</legend>
+        <label><textarea id="f_thresholds" spellcheck="false" style="min-height:170px"></textarea>
+          <span class="h">Each metric takes either <code>{ good, warn, higherIsBetter }</code>, or an
+            ordered <code>bands</code> list read like conditional-formatting rules — first match wins,
+            <code>from</code> and <code>to</code> inclusive, either one omitted for an open end:<br>
+            <code>{"higherIsBetter":false,"bands":[{"from":0,"to":249,"state":"good"},{"from":250,"to":299,"state":"warn"},{"from":300,"state":"bad"}]}</code><br>
+            <code>state</code> is <code>good</code>, <code>warn</code> or <code>bad</code>. Add
+            <code>"color":"#7a4fd1"</code> for a colour of your own and <code>"label"</code> for the
+            cell's tooltip. Any number of bands is fine.</span></label>
+      </fieldset>
+      <button class="btn sm" id="resetBtn">Reset all settings to defaults</button>
+    </details>
+  </div>
+  <div class="dfoot">
+    <button class="btn" id="cancelSet">Cancel</button>
+    <button class="btn primary" id="saveSet">Save &amp; refresh</button>
+  </div>
+</aside>
+
+<!-- ============ diagnostics ============ -->
+<aside id="diag" class="drawer" hidden>
+  <div class="dhead"><h2>Diagnostics</h2><button class="btn" id="closeDiag">Close</button></div>
+  <div class="dbody" id="diagBody"></div>
+  <div class="dfoot">
+    <button class="btn" id="copyDiag">Copy all</button>
+    <button class="btn primary" id="rerunDiag">Re-run last week</button>
+  </div>
+</aside>
+
+<script>
+/* ------------------------------------------------------------------ *
+ *  Weekly Ops Dashboard  —  New Relic NerdGraph
+ *  Weeks: Monday 00:00:00.000 -> Sunday 23:59:59.999 Europe/Berlin.
+ *  Hosts are separate APM application entities, selected by entity.guid.
+ * ------------------------------------------------------------------ */
+
+const TZ = 'Europe/Berlin';
+const CFG_VERSION = 56;         // bump invalidates stale browser-saved settings
+
+const DEFAULTS = {
+  cfgVersion: CFG_VERSION,
+  region: 'EU',
+  accountId: '',
+  team: { name:'Weekly Ops Dashboard' },
+  applications: [],
+  appId: 'all',
+  monitorNames: [],
+  hostAttribute: 'entity.name',
+  weeks: 12,
+  hostLabels: {},
+  thresholds: {
+    uptime:{good:99.9,warn:99.5,higherIsBetter:true},
+    responseMs:{ higherIsBetter:false, bands:[
+      { from:0,   to:249, state:'good', label:'0-249 ms' },
+      { from:250, to:299, state:'warn', label:'250-299 ms' },
+      { from:300,         state:'bad',  label:'300 ms and above' }
+    ]},
+    errorRate:{ higherIsBetter:false, bands:[
+      { from:0,     to:0.001, state:'good', label:'0-0.001%' },
+      { from:0.001, to:0.01,  state:'warn', label:'0.001-0.01%' },
+      { from:0.01,            state:'bad',  label:'above 0.01%' }
+    ]},
+    errors:{ higherIsBetter:false, bands:[
+      { from:0,    to:49,  state:'good', label:'0-49' },
+      { from:50,   to:999, state:'warn', label:'50-999' },
+      { from:1000,         state:'bad',  label:'1000 and above' }
+    ]},
+    alerts:{ higherIsBetter:false, bands:[
+      { from:0, to:0, state:'good', label:'none' },
+      { from:1, to:3, state:'warn', label:'1-3' },
+      { from:4,       state:'bad',  label:'more than 3' }
+    ]}
+  },
+  nrql: {
+    uptime:"SELECT 100 - (count(apm.service.error.count) / count(apm.service.transaction.duration) * 100) AS value FROM Metric WHERE entity.guid IN ({{GUIDS}}) {{RANGE}}",
+    responseMs:"SELECT average(apm.service.transaction.duration) * 1000 AS value FROM Metric WHERE entity.guid IN ({{GUIDS}}) AND transactionType = 'Web' {{RANGE}}",
+    errors:"SELECT sum(newrelic.error.group.occurrences) AS value FROM Metric WHERE metricName = 'newrelic.error.group.occurrences' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) {{RANGE}}",
+    errorRate:"SELECT count(apm.service.error.count) / count(apm.service.transaction.duration) * 100 AS value FROM Metric WHERE entity.guid IN ({{GUIDS}}) {{RANGE}}",
+    alerts:"SELECT count(*) AS value FROM NrAiIncident WHERE event = 'open' AND priority = 'critical' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) {{RANGE}}",
+    topErrors:"SELECT sum(newrelic.error.group.occurrences) AS count FROM Metric WHERE metricName = 'newrelic.error.group.occurrences' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) FACET `error.group.message`, `error.group.name`, {{HOST_ATTR}}, `entity.guid` {{RANGE}} LIMIT 12",
+    perHostAlerts:"SELECT count(*) AS alerts FROM NrAiIncident WHERE event = 'open' AND priority = 'critical' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+    perHost:"SELECT count(apm.service.transaction.duration) AS throughput, average(apm.service.transaction.duration) * 1000 AS responseMs, count(apm.service.error.count) AS errorEvents FROM Metric WHERE entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20",
+    perHostErrors:"SELECT sum(newrelic.error.group.occurrences) AS errors FROM Metric WHERE metricName = 'newrelic.error.group.occurrences' AND (error.group.issueType = 'Error' OR error.group.issueType IS NULL) AND entity.guid IN ({{GUIDS}}) FACET {{HOST_ATTR}} {{RANGE}} LIMIT 20"
+  }
+};
+
+const UPTIME_SYNTHETIC =
+  "SELECT percentage(count(*), WHERE result = 'SUCCESS') AS value FROM SyntheticCheck WHERE monitorName IN ({{MONITORS}}) {{RANGE}}";
+
+const METRICS = [
+  { key:'uptime',     label:'Uptime %',      fmt:v => fmtNum(v,3)+'%', th:'uptime' },
+  { key:'responseMs', label:'Avg resp (ms)', fmt:v => fmtNum(v,0),     th:'responseMs' },
+  { key:'errors',     label:'Errors',        fmt:v => fmtInt(v),       th:'errors' },
+  { key:'errorRate',  label:'Error rate %',  fmt:v => fmtNum(v,4)+'%', th:'errorRate' },
+  { key:'alerts',     label:'Alerts',        fmt:v => fmtInt(v),       th:'alerts' }
+];
+
+let CFG = structuredClone(DEFAULTS);
+let WEEKS = [];
+let HAS_KEY = false;
+let SERVER = false;
+let ENTITIES = [];            // discovered [{guid,name,reporting}]
+let EXPANDED = new Set();
+let MODE = 'empty';
+let SNAPSHOT = null;      // set when served as a static GitLab Pages snapshot
+let LAST_FETCH = null;    // when the live New Relic query last completed
+let DIAG = { week:null, queries:[] };   // [{name, nrql, results, error}]
+
+/* ---------------- time zone ---------------- */
+
+const PARTS_FMT = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TZ, hour12:false, weekday:'short',
+  year:'numeric', month:'2-digit', day:'2-digit',
+  hour:'2-digit', minute:'2-digit', second:'2-digit'
+});
+function tzParts(ms){
+  const o = {};
+  for (const p of PARTS_FMT.formatToParts(new Date(ms))) o[p.type] = p.value;
+  return { y:+o.year, m:+o.month, d:+o.day,
+           h:(o.hour === '24' ? 0 : +o.hour), mi:+o.minute, s:+o.second, wd:o.weekday };
+}
+function tzOffsetMs(ms){
+  const p = tzParts(ms);
+  return Date.UTC(p.y, p.m-1, p.d, p.h, p.mi, p.s) - (ms - (ms % 1000));
+}
+function wallToUtc(y, m, d, h = 0, mi = 0, s = 0){
+  const naive = Date.UTC(y, m-1, d, h, mi, s);
+  let g = naive;
+  for (let i = 0; i < 4; i++){ const n = naive - tzOffsetMs(g); if (n === g) break; g = n; }
+  return g;
+}
+const WD_INDEX = { Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5, Sun:6 };
+function mondayDateOf(ms){
+  const p = tzParts(ms);
+  const s = new Date(Date.UTC(p.y, p.m-1, p.d) - (WD_INDEX[p.wd] ?? 0)*864e5);
+  return { y:s.getUTCFullYear(), m:s.getUTCMonth()+1, d:s.getUTCDate() };
+}
+function addDays(dt, n){
+  const t = new Date(Date.UTC(dt.y, dt.m-1, dt.d) + n*864e5);
+  return { y:t.getUTCFullYear(), m:t.getUTCMonth()+1, d:t.getUTCDate() };
+}
+function isoWeek(dt){
+  const t = new Date(Date.UTC(dt.y, dt.m-1, dt.d));
+  t.setUTCDate(t.getUTCDate() - ((t.getUTCDay()+6)%7) + 3);
+  const year = t.getUTCFullYear(), jan4 = new Date(Date.UTC(year,0,4));
+  return { year, week: 1 + Math.round(((t - jan4)/864e5 - 3 + ((jan4.getUTCDay()+6)%7))/7) };
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dLabel = d => `${String(d.d).padStart(2,'0')} ${MON[d.m-1]}`;
+
+function buildWeeks(n){
+  const nowMonday = mondayDateOf(Date.now());
+  const list = [];
+  for (let i = 0; i < n; i++){
+    const start = addDays(nowMonday, -7*i);
+    const nextStart = addDays(start, 7);
+    const endShown = addDays(start, 6);
+    const iw = isoWeek(start);
+    list.push({
+      key:`${iw.year}-W${String(iw.week).padStart(2,'0')}`,
+      isoLabel:`W${String(iw.week).padStart(2,'0')}`, isoYear:iw.year,
+      startMs: wallToUtc(start.y,start.m,start.d),
+      endMs:   wallToUtc(nextStart.y,nextStart.m,nextStart.d),
+      startLabel: dLabel(start),
+      endLabel: dLabel(endShown) + (endShown.y !== start.y ? ' ' + endShown.y : ''),
+      year:start.y, current:i===0, partial:i===0,
+      metrics:{}, hosts:[]
+    });
+  }
+  return list;
+}
+function tzAbbrev(){ return (-tzOffsetMs(Date.now())/36e5) === -2 ? 'CEST' : 'CET'; }
+
+/* ---------------- formatting ---------------- */
+
+function fmtNum(v, dp){
+  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  return Number(v).toLocaleString('en-GB', { minimumFractionDigits:dp, maximumFractionDigits:dp });
+}
+function fmtInt(v){
+  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  return Math.round(Number(v)).toLocaleString('en-GB');
+}
+/**
+ * Two threshold shapes are supported per metric:
+ *
+ *   legacy  { good, warn, higherIsBetter }
+ *   bands   { higherIsBetter, bands: [ {from,to,state,label,color}, … ] }
+ *
+ * Bands are evaluated in the order written — like conditional-formatting
+ * rules — and the first one whose range contains the value wins. `from` and
+ * `to` are both inclusive, and either may be omitted for an open end, so a
+ * final band with neither is the catch-all.
+ */
+const CSS_COLOR = /^(#[0-9a-f]{3,8}|[a-z]+|(rgb|hsl)a?\([0-9,.%\s/]+\))$/i;
+
+function bandFor(k, v, th){
+  if (v === null || v === undefined || Number.isNaN(v)) return { state:'none' };
+  const t = (th || thFor(currentApp()) || {})[k];
+  if (!t) return { state:'none' };
+
+  if (Array.isArray(t.bands)){
+    for (const b of t.bands){
+      if ((b.from == null || v >= b.from) && (b.to == null || v <= b.to))
+        return { state: b.state || 'none', color: b.color, label: b.label };
+    }
+    return { state:'none' };
+  }
+  return { state: t.higherIsBetter
+    ? (v >= t.good ? 'good' : v >= t.warn ? 'warn' : 'bad')
+    : (v <= t.good ? 'good' : v <= t.warn ? 'warn' : 'bad') };
+}
+
+const grade = (k, v, th) => bandFor(k, v, th).state;
+
+/** Render a pill from an already-chosen band. */
+function pillFromBand(b, text, titleOverride){
+  const custom = b.color && CSS_COLOR.test(String(b.color)) ? String(b.color) : null;
+  const style = custom
+    ? ` style="color:${custom};background:color-mix(in srgb, ${custom} 15%, transparent)"` : '';
+  const tip = titleOverride || b.label;
+  return `<span class="pill ${b.state}"${style}${tip ? ` title="${esc(tip)}"` : ''}>${text}</span>`;
+}
+
+/** A coloured pill for one value, honouring any custom band colour. */
+const pillHtml = (k, v, text, th) => pillFromBand(bandFor(k, v, th), text);
+
+const STATE_RANK = { none:0, good:1, warn:2, bad:3 };
+
+/**
+ * A weekly total is coloured by the worst band any single application fell
+ * into, not by grading the summed figure — so the total only turns amber or
+ * red when at least one application actually did. Falls back to grading the
+ * total itself when there is no per-application breakdown for that week.
+ */
+function worstBand(thKey, hostField, view){
+  let worst = null, who = null;
+  for (const h of (view.hosts || [])){
+    // h.th is set when the row belongs to an application with its own bands,
+    // which is what makes the combined view comparable at all.
+    const b = bandFor(thKey, h[hostField], h.th);
+    if (b.state === 'none') continue;
+    if (!worst || STATE_RANK[b.state] > STATE_RANK[worst.state]){ worst = b; who = h.name; }
+  }
+  return worst ? { band:worst, who } : null;
+}
+
+const worstState = (thKey, hostField, view) => worstBand(thKey, hostField, view)?.band.state ?? null;
+
+/* ---------------- why a number is red ---------------- */
+
+/** The metrics an error group actually explains. */
+const WHY_METRICS = new Set(['errors', 'errorRate']);
+
+/**
+ * Error groups from a FACET query, biggest first.
+ *
+ * Mirrors top_errors() in fetch_snapshot.py so a live page and a published one
+ * show the same thing. The facets are message, class, provider, entity guid —
+ * the guid is what lets each line link to the right application.
+ */
+function topErrorsFrom(results, limit = 6){
+  const out = [];
+  for (const row of (results || [])){
+    const f = Array.isArray(row.facet) ? row.facet : [row.facet];
+    const message = f[0] == null ? '' : String(f[0]);
+    const name    = f[1] == null ? '' : String(f[1]);
+    const host    = f[2] == null ? '' : String(f[2]);
+    const guid    = f[3] == null ? '' : String(f[3]);
+    let count = row.count;
+    if (count == null){
+      for (const [k, v] of Object.entries(row))
+        if (k !== 'facet' && typeof v === 'number'){ count = v; break; }
+    }
+    if (!message && !name) continue;
+    out.push({ message: message.slice(0, 400), name: name.slice(0, 200), host, guid, count });
+  }
+  out.sort((a, b) => (b.count || 0) - (a.count || 0));
+  return out.slice(0, limit);
+}
+
+/**
+ * New Relic's own link to an entity.
+ *
+ * `/redirect/entity/<guid>` is the documented, stable way in. There is no
+ * documented permalink to a single error group — the Errors Inbox keeps the
+ * selection behind an opaque state token — so the link lands on the
+ * application for that week rather than pretending to deep-link a group it
+ * cannot address.
+ */
+function nrEntityLink(guid, week){
+  if (!guid) return null;
+  const host = (CFG.region || 'EU').toUpperCase() === 'EU'
+    ? 'https://one.eu.newrelic.com' : 'https://one.newrelic.com';
+  const q = week ? `?begin=${week.startMs}&end=${week.endMs}` : '';
+  return `${host}/redirect/entity/${encodeURIComponent(guid)}${q}`;
+}
+
+/** The errors recorded for a week, narrowed to one provider when asked. */
+function errorsFor(view, host){
+  const all = (view && view.week && view.week.topErrors) || [];
+  if (!host) return all;
+  const mine = all.filter(e => e.host === host);
+  return mine.length ? mine : [];
+}
+
+/**
+ * Attach the explanation to a number that is in the red.
+ *
+ * Only red: amber and green need no excuse, and putting a card on every cell
+ * would make the table twitch under the cursor. The cell keeps a plain-text
+ * title as well, so the information survives for anyone who cannot hover.
+ */
+function withWhy(html, state, key, view, host){
+  // Errors and the error rate are counted from error groups, so the groups
+  // explain them. Uptime is derived from transaction counts and is not the
+  // same question, even when the same week is bad — so it gets no card.
+  if (state !== 'bad' || !WHY_METRICS.has(key)) return html;
+  const errs = errorsFor(view, host);
+  if (!errs.length) return html;
+  const top = errs[0];
+  const plain = `${top.count != null ? fmtInt(top.count) + ' x ' : ''}${top.message || top.name}`;
+  const payload = encodeURIComponent(JSON.stringify({
+    week: view.week.key, host: host || '', key
+  }));
+  // No `title`: the browser's own tooltip would appear alongside the card,
+  // grey and late and saying the same thing. aria-label carries the text for
+  // anyone not using a pointer without drawing a second tooltip.
+  // No mark of any kind. The number is red and the cursor changes over it;
+  // that is the whole affordance.
+  return `<span class="why" data-why="${payload}" tabindex="0" role="button"`
+       + ` aria-label="${esc(plain)}">${html}</span>`;
+}
+
+/**
+ * Hovering explains; clicking pins it so a link can be followed.
+ *
+ * Both tables use this. In the History table a cell also sits inside a row
+ * that toggles open, so the click must not travel.
+ */
+function wireWhy(table){
+  table.querySelectorAll('span.why').forEach(el => {
+    let timer = null;
+    el.addEventListener('mouseenter', () => { timer = setTimeout(() => showWhy(el), 180); });
+    el.addEventListener('mouseleave', () => {
+      clearTimeout(timer);
+      const pop = document.getElementById('whyPop');
+      // Leave it up while the pointer is inside it, so a link is clickable.
+      setTimeout(() => { if (pop && !pop.matches(':hover')) closeWhy(); }, 220);
+    });
+    el.addEventListener('click', e => { e.stopPropagation(); showWhy(el); });
+    el.addEventListener('focus', () => showWhy(el));
+    el.addEventListener('blur', () => {
+      const pop = document.getElementById('whyPop');
+      setTimeout(() => { if (pop && !pop.matches(':hover')) closeWhy(); }, 220);
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); showWhy(el); }
+    });
+  });
+}
+
+function showWhy(anchor){
+  closeWhy(true);
+  let spec;
+  try { spec = JSON.parse(decodeURIComponent(anchor.dataset.why)); } catch { return; }
+  // The History table and the matrix hold different week lists, so the week is
+  // found in whichever has it rather than assuming one of them.
+  const view = filteredViews().find(v => v.week.key === spec.week)
+    || (WEEKS.filter(w => w.key === spec.week)
+             .map(w => ({ week: w, hosts: w.hosts || [] }))[0]);
+  if (!view) return;
+  const errs = errorsFor(view, spec.host);
+  if (!errs.length) return;
+
+  // Each error carries the entity it came from, so the link is exact. Only
+  // when the snapshot predates that does it fall back to the application.
+  const app = currentApp();
+  const fallback = ((app && app.entityGuids) || [])[0];
+
+  // The biggest error group only. Showing six turned a glance into reading;
+  // the rest are a click away in New Relic, and the count says how many.
+  const top = errs[0];
+  const href = nrEntityLink(top.guid || fallback, view.week);
+  const text = esc(top.message || top.name);
+  const body = href
+    ? `<a href="${esc(href)}" target="_blank" rel="noreferrer">${text}</a>` : text;
+  const rest = errs.length - 1;
+
+  const pop = document.createElement('div');
+  pop.id = 'whyPop';
+  pop.className = 'whypop';
+  pop.innerHTML = `<div class="nhead">${esc(spec.host || 'All providers')} · `
+    + `${esc(view.week.isoLabel)} ${view.week.isoYear}</div>`
+    + `<div class="whyrow">`
+    + (top.count != null ? `<span class="whyn">${fmtInt(top.count)}</span>` : '')
+    + `<span class="whym">${body}`
+    + (top.name && top.name !== top.message ? `<span class="whyc">${esc(top.name)}</span>` : '')
+    + `</span></div>`
+    + `<div class="nfoot"><span class="nwho">`
+    + (rest > 0 ? `Largest of ${errs.length} error groups this week. ` : 'The error group this week. ')
+    + `New Relic has no permalink to a single group, so the link opens the `
+    + `application for these dates.</span></div>`;
+  document.body.appendChild(pop);
+
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = Math.min(r.left + window.scrollX, window.scrollX + innerWidth - w - 10);
+  left = Math.max(10 + window.scrollX, left);
+  const below = r.bottom + 8 + h < innerHeight;
+  pop.style.left = left + 'px';
+  pop.style.top = (below ? r.bottom + 6 : r.top - h - 6) + window.scrollY + 'px';
+  document.addEventListener('keydown', _whyEsc, true);
+  document.addEventListener('mousedown', _whyOutside, true);
+  // Leaving the card itself closes it. Without this it could be left hanging:
+  // the cell's own mouseleave deliberately spares a card the pointer is in.
+  pop.addEventListener('mouseleave', () => closeWhy());
+  pop.addEventListener('mouseenter', () => pop.classList.remove('out'));
+  requestAnimationFrame(() => pop.classList.add('in'));
+}
+const _whyEsc = e => { if (e.key === 'Escape'){ e.stopPropagation(); closeWhy(); } };
+
+/** A press anywhere that is not the card or the number that opened it. */
+const _whyOutside = (e) => {
+  const pop = document.getElementById('whyPop');
+  if (!pop) return;
+  if (pop.contains(e.target) || e.target.closest?.('span.why')) return;
+  closeWhy();
+};
+
+/**
+ * Take the card down.
+ *
+ * The id is released first so a new card can open while this one is still
+ * fading, and the element is removed by its own timer — otherwise opening a
+ * second card immediately would see the first one's pending removal take the
+ * new one with it. `instant` skips the fade when one card replaces another,
+ * where a cross-fade just looks like a flicker.
+ */
+function closeWhy(instant){
+  const el = document.getElementById('whyPop');
+  document.removeEventListener('keydown', _whyEsc, true);
+  document.removeEventListener('mousedown', _whyOutside, true);
+  if (!el) return;
+  el.removeAttribute('id');
+  if (instant){ el.remove(); return; }
+  el.classList.add('out');
+  setTimeout(() => el.remove(), 170);
+}
+
+function totalPill(thKey, hostField, view, text){
+  const hit = worstBand(thKey, hostField, view);
+  if (!hit) return pillHtml(thKey, view.metrics[thKey], text, thFor(currentApp()));
+  const noun = view.combined ? 'worst application' : 'worst';
+  const tip = `${noun}: ${hit.who}${hit.band.label ? ' — ' + hit.band.label : ''}`;
+  return pillFromBand(hit.band, text, tip);
+}
+
+/** The value to draw the dashed target line at: the edge of the "good" band. */
+function targetOf(k, th){
+  const t = (th || thFor(currentApp()) || {})[k];
+  if (!t) return null;
+  if (Array.isArray(t.bands)){
+    const good = t.bands.find(b => b.state === 'good');
+    if (!good) return null;
+    const edge = t.higherIsBetter ? good.from : good.to;
+    return edge == null ? null : Number(edge);
+  }
+  return t.good == null ? null : Number(t.good);
+}
+function delta(k, cur, prev){
+  if (cur == null || prev == null || Number.isNaN(cur) || Number.isNaN(prev)) return null;
+  const diff = cur - prev, t = (CFG.thresholds || {})[k] || {};
+  return { diff, better: t.higherIsBetter ? diff > 0 : diff < 0, flat: Math.abs(diff) < 1e-9 };
+}
+function sparkline(values, higherIsBetter){
+  const pts = values.filter(v => v != null && !Number.isNaN(v));
+  if (pts.length < 2) return '';
+  const w = 96, h = 20, min = Math.min(...pts), max = Math.max(...pts);
+  const span = (max - min) || 1, step = w / (values.length - 1);
+  let d = '', started = false;
+  values.forEach((v, i) => {
+    if (v == null || Number.isNaN(v)) return;
+    const x = (i*step).toFixed(1), y = (h - 2 - ((v-min)/span)*(h-4)).toFixed(1);
+    d += (started ? ' L' : 'M') + x + ' ' + y; started = true;
+  });
+  const up = values[values.length-1] > pts[0];
+  const col = (up === !!higherIsBetter) ? 'var(--good)' : 'var(--bad)';
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+    <path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/></svg>`;
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------------- applications ---------------- */
+
+const ALL = 'all';
+
+const apps = () => (Array.isArray(CFG.applications) ? CFG.applications : [])
+  .filter(a => a && a.enabled !== false);
+const appById = id => apps().find(a => a.id === id) || null;
+const isCombined = () => CFG.appId === ALL && apps().length > 1;
+
+/** The application in view, or a stand-in describing the combined view. */
+const currentApp = () =>
+  appById(CFG.appId) || (apps().length ? { id:ALL, name:'Both applications', kind:'mixed' } : null);
+
+/** Thresholds for an application, falling back to the shared defaults. */
+const thFor = app => (app && app.thresholds) || CFG.thresholds || {};
+
+const guidsOf = app => (app && app.entityGuids) || [];
+const facetOf = app => (app && app.hostAttribute) || CFG.hostAttribute || 'entity.name';
+const labelsOf = app => (app && app.hostLabels) || CFG.hostLabels || {};
+const entityCountOf = app => guidsOf(app).length || (app && app.entityCount) || 0;
+
+/** Options for the picker: every application, plus "Both" when there are two. */
+function appChoices(){
+  const list = apps().map(a => ({ id:a.id, name:a.name || a.id, note:a.role || '' }));
+  if (list.length > 1) list.unshift({ id:ALL, name:'Both applications', note:'team view' });
+  return list;
+}
+
+/** The application and provider pickers describe New Relic entities, so they
+ *  do not belong on the Delivery tab, where the data is team-level. */
+const opsTabActive = () => NAV === 'operations';
+
+function renderAppSelect(){
+  const list = document.getElementById('svcList');
+  const label = document.getElementById('svcLabel');
+  const wrap = document.getElementById('svcBtn')?.parentElement;
+  if (!list || !label || !wrap) return;
+
+  const all = appChoices();
+  wrap.hidden = all.length < 2;
+  label.textContent = (currentApp() || {}).name || 'Applications';
+
+  list.innerHTML = '';
+  all.forEach(x => {
+    const chosen = x.id === CFG.appId;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opt';
+    b.setAttribute('role', 'option');
+    b.setAttribute('aria-selected', String(chosen));
+    b.innerHTML = `<span class="tick">${chosen ? '\u2713' : ''}</span>${esc(x.name)}`
+      + (x.note ? `<span class="chip">${esc(x.note)}</span>` : '');
+    b.addEventListener('click', () => { closeMenus(); switchApp(x.id); });
+    list.appendChild(b);
+  });
+}
+const renderServiceSelect = renderAppSelect;
+
+/**
+ * Switch what is in view. Provider names are shared between the applications,
+ * but the provider *filter* is kept per selection so a narrowed view of one
+ * application does not silently narrow the other.
+ */
+async function switchApp(id){
+  if (!id || id === CFG.appId) return;
+  CFG.appId = id;
+  EXPANDED.clear();
+  try { localStorage.setItem('weeklyOpsApp', id); } catch {}
+  renderAppSelect();
+
+  if (MODE === 'static'){ rebuildWeeks(); clearBanners(); snapshotBanner(); render(); return; }
+  const needed = id === ALL ? apps().map(a => a.id) : [id];
+  if (needed.every(k => WEEKS_BY_APP[k])){ rebuildWeeks(); clearBanners(); render(); return; }
+  await refresh();
+}
+
+/**
+ * The weeks currently on screen. For a single application that is just its
+ * own series. For the combined view each metric shows the WORSE of the two —
+ * availability of an API and of a ping monitor cannot be averaged, and a sum
+ * would be meaningless, but "our worst this week" is both true and useful.
+ */
+function rebuildWeeks(){
+  if (!isCombined()){
+    WEEKS = (WEEKS_BY_APP[CFG.appId] || []).map(w => Object.assign({}, w, {
+      hosts: (w.hosts || []).map(h => Object.assign({}, h, { th: thFor(appById(CFG.appId)) }))
+    }));
+    return;
+  }
+
+  const series = apps().map(a => ({ app:a, weeks: WEEKS_BY_APP[a.id] || [] }))
+                       .filter(x => x.weeks.length);
+  if (!series.length){ WEEKS = []; return; }
+
+  const spine = series[0].weeks;
+  WEEKS = spine.map((w, i) => {
+    // one row per application, each carrying its own bands
+    const hosts = series.map(({ app, weeks }) => {
+      const sw = weeks[i] || { metrics:{} };
+      const m = sw.metrics || {};
+      return {
+        raw: app.id, name: app.name || app.id, th: thFor(app), app: app.id,
+        uptime: m.uptime ?? null, responseMs: m.responseMs ?? null,
+        errors: m.errors ?? null, errorRate: m.errorRate ?? null,
+        alerts: m.alerts ?? null, throughput: null
+      };
+    });
+
+    // Worst band first; on a tie the numerically worse figure, so "our worst
+    // availability this week" is literally the lower of the two.
+    const worstOf = key => {
+      const hib = !!((thFor(appById(hosts[0]?.app)) || {})[key] || {}).higherIsBetter;
+      let pick = null;
+      for (const h of hosts){
+        const v = h[key];
+        if (v == null) continue;
+        const b = bandFor(key, v, h.th);
+        const rank = STATE_RANK[b.state] || 0;
+        if (!pick) { pick = { rank, v }; continue; }
+        if (rank > pick.rank) pick = { rank, v };
+        else if (rank === pick.rank && (hib ? v < pick.v : v > pick.v)) pick.v = v;
+      }
+      return pick ? pick.v : null;
+    };
+
+    return Object.assign({}, w, {
+      metrics: {
+        uptime: worstOf('uptime'), responseMs: worstOf('responseMs'),
+        errors: worstOf('errors'), errorRate: worstOf('errorRate'),
+        alerts: worstOf('alerts')
+      },
+      hosts, combined: true
+    });
+  });
+}
+
+/* ---------------- NRQL ---------------- */
+
+const quoteList = arr => (arr && arr.length ? arr : ['']).map(s => `'${String(s).replace(/'/g,"\\'")}'`).join(', ');
+
+function renderNrql(tpl, week, app){
+  return String(tpl || '')
+    .replace(/\{\{RANGE\}\}/g,     `SINCE ${week.startMs} UNTIL ${week.endMs}`)
+    .replace(/\{\{GUIDS\}\}/g,     quoteList(guidsOf(app)))
+    .replace(/\{\{MONITORS\}\}/g,  quoteList(CFG.monitorNames))
+    .replace(/\{\{HOST_ATTR\}\}/g, facetOf(app))
+    .replace(/\{\{APPS\}\}/g,      quoteList(guidsOf(app)))   // legacy templates
+    .trim();
+}
+
+const GQL_WEEK = `query W($id: Int!, $qUptime: Nrql!, $qResp: Nrql!, $qErrors: Nrql!, $qRate: Nrql!, $qAlerts: Nrql!, $qHosts: Nrql!, $qHostErrors: Nrql!, $qHostAlerts: Nrql!, $qTopErrors: Nrql!) {
+  actor { account(id: $id) {
+    uptime:        nrql(query: $qUptime)     { results }
+    responseMs:    nrql(query: $qResp)       { results }
+    errors:        nrql(query: $qErrors)     { results }
+    errorRate:     nrql(query: $qRate)       { results }
+    alerts:        nrql(query: $qAlerts)     { results }
+    perHost:       nrql(query: $qHosts)      { results }
+    perHostErrors: nrql(query: $qHostErrors) { results }
+    perHostAlerts: nrql(query: $qHostAlerts) { results }
+    topErrors:     nrql(query: $qTopErrors)  { results }
+  } }
+}`;
+
+const GQL_ENTITIES = `query E($q: String!) {
+  actor { entitySearch(query: $q) { count results { entities { guid name reporting } } } }
+}`;
+
+const GQL_PING = `query P($id: Int!) { actor { account(id: $id) { id name } } }`;
+
+async function nerdgraph(query, variables, regionOverride){
+  const res = await fetch('/api/nerdgraph', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ region: regionOverride || CFG.region, query, variables })
+  });
+  if (!res.ok) throw new Error('Local proxy returned HTTP ' + res.status);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  if (json.errors && json.errors.length) throw new Error(json.errors.map(e => e.message).join(' | '));
+  return json.data;
+}
+
+const firstValue = results => {
+  if (!Array.isArray(results) || !results.length) return null;
+  const row = results[0];
+  if (row == null) return null;
+  if ('value' in row) return row.value == null ? null : Number(row.value);
+  const nums = Object.values(row).filter(v => typeof v === 'number');
+  return nums.length ? nums[0] : null;
+};
+
+const facetKey = (r, app) => r.facet != null
+  ? (Array.isArray(r.facet) ? r.facet.join(' / ') : String(r.facet))
+  : String(r[facetOf(app)] ?? r['entity.name'] ?? 'unknown');
+
+function mergeHosts(base, errs, alerts, app){
+  const labels = labelsOf(app);
+  const map = new Map();
+  const blank = raw => ({ raw, name: labels[raw] || raw, th: thFor(app),
+    throughput:null, responseMs:null, errors:null, alerts:null });
+
+  (Array.isArray(base) ? base : []).forEach(r => {
+    const raw = facetKey(r, app), cur = blank(raw);
+    cur.throughput = r.throughput == null ? null : Number(r.throughput);
+    cur.responseMs = r.responseMs == null ? null : Number(r.responseMs);
+    cur.errors     = r.errorEvents == null ? null : Number(r.errorEvents);
+    map.set(raw, cur);
+  });
+  (Array.isArray(errs) ? errs : []).forEach(r => {
+    const raw = facetKey(r, app), cur = map.get(raw) || blank(raw);
+    if (r.errors != null) cur.errors = Number(r.errors);
+    map.set(raw, cur);
+  });
+  // Alerts facet only returns applications that actually had an incident, so
+  // every other application gets an explicit 0 rather than a blank.
+  if (Array.isArray(alerts)){
+    alerts.forEach(r => {
+      const raw = facetKey(r, app), cur = map.get(raw) || blank(raw);
+      if (r.alerts != null) cur.alerts = Number(r.alerts);
+      map.set(raw, cur);
+    });
+    map.forEach(h => { if (h.alerts == null) h.alerts = 0; });
+  }
+  const out = [...map.values()].map(h => {
+    h.errorRate = (h.throughput && h.errors != null) ? (h.errors / h.throughput) * 100 : null;
+    h.uptime = h.errorRate == null ? null : 100 - h.errorRate;
+    return h;
+  });
+  out.sort((a,b) => a.name.localeCompare(b.name));
+  return out;
+}
+
+/* ---------------- loading ---------------- */
+
+async function loadLive(){
+  if (!SERVER) throw new Error('This page is not served by server.py, so it cannot reach New Relic.');
+  if (!CFG.accountId) throw new Error('No account ID set — check config.json.');
+  if (!apps().length) throw new Error('config.json lists no applications.');
+
+  const wanted = CFG.appId === ALL ? apps() : [appById(CFG.appId)].filter(Boolean);
+  if (!wanted.length) throw new Error('Nothing selected to load.');
+  for (const app of wanted)
+    if (!guidsOf(app).length) throw new Error(`${app.name} has no entity GUIDs in config.json.`);
+
+  const count = Math.max(1, Math.min(104, Number(CFG.weeks) || 12));
+  const bar = document.querySelector('#prog > i');
+  document.getElementById('prog').hidden = false;
+  bar.style.width = '2%';
+
+  const failures = [];
+  DIAG = { week:null, queries:[] };
+  let done = 0;
+  const steps = wanted.length * count;
+
+  for (const app of wanted){
+    const weeks = buildWeeks(count);
+    const nrql = app.nrql || {};
+    const uptimeTpl = (CFG.monitorNames && CFG.monitorNames.length && app.kind === 'apm')
+      ? UPTIME_SYNTHETIC : nrql.uptime;
+
+    for (let i = 0; i < weeks.length; i++){
+      const w = weeks[i];
+      const vars = {
+        id: Number(CFG.accountId),
+        qUptime:     renderNrql(uptimeTpl, w, app),
+        qResp:       renderNrql(nrql.responseMs, w, app),
+        qErrors:     renderNrql(nrql.errors, w, app),
+        qRate:       renderNrql(nrql.errorRate, w, app),
+        qAlerts:     renderNrql(nrql.alerts, w, app),
+        qHosts:      renderNrql(nrql.perHost, w, app),
+        qHostErrors: renderNrql(nrql.perHostErrors, w, app),
+        qHostAlerts: renderNrql(nrql.perHostAlerts, w, app),
+        // The errors behind a red number. Asked for here too, not only in the
+        // published snapshot — running locally is where anyone actually digs
+        // into a bad week.
+        // An application with neither template still has to send something:
+        // the variable is non-null in the query, so a missing one would fail
+        // the whole week, not just this part of it.
+        qTopErrors:  renderNrql(nrql.topErrors || nrql.perHostErrors
+                                || "SELECT count(*) FROM Metric LIMIT 1", w, app)
+      };
+      try {
+        const data = await nerdgraph(GQL_WEEK, vars);
+        const acct = data && data.actor && data.actor.account;
+        if (!acct) throw new Error('NerdGraph returned no account — wrong account ID, wrong region, or the key has no access.');
+        w.metrics = {
+          uptime:     firstValue(acct.uptime?.results),
+          responseMs: firstValue(acct.responseMs?.results),
+          errors:     firstValue(acct.errors?.results),
+          errorRate:  firstValue(acct.errorRate?.results),
+          alerts:     firstValue(acct.alerts?.results)
+        };
+        if (w.metrics.uptime == null && w.metrics.errorRate != null)
+          w.metrics.uptime = 100 - w.metrics.errorRate;
+        w.hosts = mergeHosts(acct.perHost?.results, acct.perHostErrors?.results,
+                             acct.perHostAlerts?.results, app);
+        w.topErrors = topErrorsFrom(acct.topErrors?.results);
+
+        if (!DIAG.queries.length || (i === 0 && app.id === (wanted[0] || {}).id)){
+          DIAG = { week:w, app:app.name, queries:[
+            ['uptime', vars.qUptime, acct.uptime?.results],
+            ['responseMs', vars.qResp, acct.responseMs?.results],
+            ['errors', vars.qErrors, acct.errors?.results],
+            ['errorRate', vars.qRate, acct.errorRate?.results],
+            ['alerts', vars.qAlerts, acct.alerts?.results],
+            ['perHost', vars.qHosts, acct.perHost?.results],
+            ['perHostErrors', vars.qHostErrors, acct.perHostErrors?.results],
+            ['perHostAlerts', vars.qHostAlerts, acct.perHostAlerts?.results]
+          ].map(([name,nrql,results]) => ({ name, nrql, results, error:null })) };
+        }
+      } catch (err){
+        failures.push(`${app.name} ${w.key}: ${err.message}`);
+        if (!DIAG.queries.length) DIAG = { week:w, app:app.name, queries:
+          [['uptime',vars.qUptime],['responseMs',vars.qResp],['errors',vars.qErrors],
+           ['errorRate',vars.qRate],['alerts',vars.qAlerts],['perHost',vars.qHosts],
+           ['perHostErrors',vars.qHostErrors],['perHostAlerts',vars.qHostAlerts]]
+          .map(([name,nrql]) => ({ name, nrql, results:null, error:err.message })) };
+      }
+      bar.style.width = Math.round((++done / steps) * 100) + '%';
+    }
+    WEEKS_BY_APP[app.id] = weeks;
+  }
+
+  document.getElementById('prog').hidden = true;
+  MODE = 'live';
+  rebuildWeeks();
+
+  if (failures.length) banner('bad', `<strong>${failures.length} of ${steps} week-queries failed.</strong> ${esc(failures[0])}
+    <div class="acts"><button class="btn sm" onclick="openDiag()">Open diagnostics</button></div>`);
+
+  const anyData = WEEKS.some(w => Object.values(w.metrics).some(v => v != null && v !== 0)) ||
+                  WEEKS.some(w => w.hosts.length);
+  if (!failures.length && !anyData){
+    banner('warn', `<strong>The queries ran but returned nothing.</strong>
+      Usually that means the entity GUIDs, the metric names, or the region do not match this account.
+      Diagnostics shows the exact NRQL that was sent — paste one into New Relic's query builder to compare.
+      <div class="acts"><button class="btn sm" onclick="openDiag()">Open diagnostics</button></div>`);
+  }
+}
+
+/**
+ * Static mode: on GitLab Pages there is no proxy, so the page reads a
+ * data.json produced by the scheduled pipeline instead of querying New Relic.
+ */
+async function loadSnapshot(){
+  let snap;
+  try {
+    const res = await fetch('data.json', { cache:'no-store' });
+    if (!res.ok) return false;
+    snap = await res.json();
+  } catch { return false; }
+  if (!snap || !snap.applications || !Object.keys(snap.applications).length) return false;
+
+  SNAPSHOT = snap;
+  MODE = 'static';
+  const c = snap.config || {};
+  const ids = Object.keys(snap.applications);
+
+  CFG = Object.assign(structuredClone(DEFAULTS), {
+    team: c.team || DEFAULTS.team,
+    accountId: c.accountId || '',
+    region: c.region || 'EU',
+    weeks: c.weeks || 0,
+    defaultApplication: c.defaultApplication || (ids.length > 1 ? ALL : ids[0]),
+    // thresholds and labels travel with each application, so the published
+    // page grades exactly as the live one does
+    applications: ids.map(id => Object.assign({
+      id, name: snap.applications[id].name || id,
+      entityCount: snap.applications[id].entityCount || 0
+    }, snap.applications[id].meta || {}))
+  });
+
+  let wanted = CFG.defaultApplication;
+  try {
+    const saved = localStorage.getItem('weeklyOpsApp');
+    if (saved && (saved === ALL || ids.includes(saved))) wanted = saved;
+  } catch {}
+  CFG.appId = (wanted === ALL && ids.length < 2) ? ids[0] : wanted;
+
+  WEEKS_BY_APP = {};
+  ids.forEach(id => { WEEKS_BY_APP[id] = snap.applications[id].weeks || []; });
+  rebuildWeeks();
+  return true;
+}
+
+/* ---------------- rendering ---------------- */
+
+function banner(kind, html){
+  const el = document.createElement('div');
+  el.className = 'banner ' + kind; el.innerHTML = html;
+  document.getElementById('banners').appendChild(el);
+}
+const clearBanners = () => { document.getElementById('banners').innerHTML = ''; };
+
+/* ---------------- history filters ---------------- */
+
+let HFILTER = { range:0 };                     // History: week range only
+
+/**
+ * The application selection is global — one choice, shown in the header, that
+ * both tabs obey. Kept per service, because the application names differ
+ * between services and a selection carried across would match nothing.
+ * null / absent means "all".
+ */
+let APPS_BY_SVC = {};
+
+const hfHosts = () => APPS_BY_SVC?.[CFG.appId] ?? null;
+const setHfHosts = v => {
+  APPS_BY_SVC[CFG.appId] = v;
+  try { localStorage.setItem('weeklyOpsApps', JSON.stringify(APPS_BY_SVC)); } catch {}
+};
+
+const allHostNames = () => {
+  const s = new Set();
+  WEEKS.forEach(w => w.hosts.forEach(h => s.add(h.name)));
+  return [...s].sort((a,b) => a.localeCompare(b));
+};
+const hostPicked = name => { const h = hfHosts(); return !h || h.includes(name); };
+const allHostsPicked = () => {
+  if (!hfHosts()) return true;
+  const all = allHostNames();
+  return all.length > 0 && all.every(hostPicked);
+};
+
+/**
+ * One week as the table should show it. With every application selected the
+ * queried totals are authoritative and used as-is. With a subset, the totals
+ * are recomputed from those applications only — otherwise the row would show
+ * a total for services the reader has just filtered out.
+ */
+function weekView(w){
+  const hosts = w.hosts.filter(h => hostPicked(h.name));
+  if (allHostsPicked() || !hosts.length)
+    return { week:w, hosts, metrics:w.metrics, derived:false, combined: !!w.combined };
+
+  const thr    = hosts.reduce((s,h) => s + (h.throughput || 0), 0);
+  const errors = hosts.reduce((s,h) => s + (h.errors || 0), 0);
+  const alerts = hosts.reduce((s,h) => s + (h.alerts  || 0), 0);
+  const respW  = hosts.reduce((s,h) => s + ((h.responseMs || 0) * (h.throughput || 0)), 0);
+  const errorRate = thr ? (errors / thr) * 100 : null;
+  return { week:w, hosts, derived:true, combined: !!w.combined, metrics:{
+    uptime: errorRate == null ? null : 100 - errorRate,
+    responseMs: thr ? respW / thr : null,
+    errors, errorRate, alerts
+  } };
+}
+
+const noHostsPicked = () => Array.isArray(hfHosts()) && hfHosts().length === 0
+                              && allHostNames().length > 0;
+
+function filteredViews(){
+  if (noHostsPicked()) return [];          // nothing ticked -> nothing to show
+  let ws = WEEKS.slice();
+  if (HFILTER.range > 0) ws = ws.slice(0, HFILTER.range);
+  return ws.map(weekView);
+}
+
+function renderHostFilter(){
+  const list = document.getElementById('appsList');
+  const label = document.getElementById('appsLabel');
+  const btn = document.getElementById('appsBtn');
+  if (!list || !label) return;
+  const names = allHostNames();
+
+  const wrap = btn?.parentElement;
+  if (wrap) wrap.hidden = isCombined() || !names.length;
+  label.textContent = allHostsPicked() ? `Providers: all ${names.length}`
+    : `Providers: ${names.filter(hostPicked).length} of ${names.length}`;
+  if (btn) btn.disabled = !names.length;
+
+  if (!names.length){
+    list.innerHTML = '<div class="none">Nothing loaded yet.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  names.forEach((name, i) => {
+    const row = document.createElement('label');
+    row.className = 'opt';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = hostPicked(name);
+    cb.addEventListener('change', () => {
+      const cur = hfHosts() ? hfHosts().slice() : names.slice();
+      const at = cur.indexOf(name);
+      cb.checked ? (at < 0 && cur.push(name)) : (at >= 0 && cur.splice(at, 1));
+      setHosts(cur, names);
+    });
+    row.appendChild(cb);
+    const sw = document.createElement('span');
+    sw.className = 'sw';
+    sw.style.background = PALETTE[i % PALETTE.length];
+    row.appendChild(sw);
+    row.appendChild(document.createTextNode(name));
+    list.appendChild(row);
+  });
+}
+
+function setHosts(picked, names){
+  setHfHosts(picked.length === names.length ? null : picked);
+  renderHostFilter(); renderKpis(); renderTable();
+  if (NAV === 'operations' && OPS_VIEW === 'trends') renderCharts();
+}
+
+const MENUS = [['svcBtn','svcMenu'], ['appsBtn','appsMenu']];
+
+function setMenu(btnId, menuId, open){
+  const menu = document.getElementById(menuId), btn = document.getElementById(btnId);
+  if (!menu || !btn) return;
+  menu.hidden = !open;
+  btn.setAttribute('aria-expanded', String(open));
+}
+const closeMenus = () => MENUS.forEach(([b,m]) => setMenu(b, m, false));
+const openHostMenu = open => setMenu('appsBtn', 'appsMenu', open);
+
+
+const saveHFilter = () => {
+  try { localStorage.setItem('weeklyOpsHistFilter', JSON.stringify(HFILTER)); } catch {}
+};
+
+function renderKpis(){
+  const host = document.getElementById('kpis');
+  host.innerHTML = '';
+  if (!WEEKS.length) return;
+  const views = filteredViews();
+  const note = document.getElementById('histNote');
+  if (views.length){
+    const oldest = views[views.length-1].week, newest = views[0].week;
+    note.textContent =
+      `${views.length} of ${WEEKS.length} weeks · ${oldest.startLabel} ${oldest.year} → ${newest.endLabel}` +
+      (allHostsPicked() ? '' : ` · ${views[0].hosts.length} of ${allHostNames().length} applications, totals recalculated`);
+  } else {
+    note.textContent = noHostsPicked()
+      ? 'no applications selected'
+      : `no weeks match the filters (${WEEKS.length} loaded)`;
+  }
+  if (!views.length) return;
+
+  // The current week against the one before it. The current week is still
+  // running, so counts are a partial tally — said plainly rather than left to
+  // look like a drop.
+  const cur = views[0], prev = views[1] || null;
+  const partial = !!cur.week.partial;
+  for (const m of METRICS){
+    const v = cur.metrics[m.key];
+    const g = worstState(m.th, m.key, cur) ?? grade(m.th, v);
+    const d = prev ? delta(m.th, v, prev.metrics[m.key]) : null;
+    let sub = `${partial ? 'In progress' : 'Week'} · ${cur.week.isoLabel} ${cur.week.isoYear}`;
+    if (d && !d.flat){
+      const mag = ['responseMs','errors','alerts'].includes(m.key)
+        ? fmtInt(Math.abs(d.diff)) : fmtNum(Math.abs(d.diff), 2);
+      sub = `<span class="${d.better ? 's-good' : 's-bad'}">${d.diff > 0 ? '▲' : '▼'} ${mag}</span>`
+          + ` vs ${prev.week.isoLabel}${partial ? ' <span class="sofar">so far</span>' : ''}`;
+    }
+    const el = document.createElement('div');
+    el.className = 'kpi';
+    el.innerHTML = `<div class="lbl">${esc(m.label)}</div>
+      <div class="val ${g === 'none' ? '' : 's-'+g}">${m.fmt(v)}</div>
+      <div class="sub"><span class="dot ${g === 'none' ? '' : 'bg-'+g}"></span>${sub}</div>`;
+    host.appendChild(el);
+  }
+}
+
+/** Full Monday-to-Sunday range, shown when hovering a week number. */
+function weekRangeTitle(w){
+  const d = ms => new Date(ms).toLocaleString('en-GB', { timeZone: TZ,
+    weekday:'short', day:'2-digit', month:'short', year:'numeric',
+    hour:'2-digit', minute:'2-digit', hour12:false });
+  return `${d(w.startMs)} → ${d(w.endMs - 60000)} ${tzAbbrev()}`;
+}
+
+function renderTable(){
+  const table = document.getElementById('histTable'), empty = document.getElementById('histEmpty');
+  const views = filteredViews();
+  if (!views.length){
+    table.hidden = true; empty.hidden = false;
+    empty.innerHTML = !WEEKS.length
+      ? 'No data yet. Open <strong>Settings</strong> to point this at your New Relic account.'
+      : noHostsPicked()
+        ? 'No applications selected. Tick at least one in the <strong>Applications</strong> menu.'
+        : 'No weeks match the current filters. <strong>Reset filters</strong> to see everything again.';
+    return;
+  }
+  table.hidden = false; empty.hidden = true;
+  const chrono = views.slice().reverse();
+
+  let head = '<tr><th class="l">Week</th>';
+  for (const m of METRICS){
+    head += `<th>${esc(m.label)}${sparkline(chrono.map(v => v.metrics[m.key] ?? null),
+      ((CFG.thresholds||{})[m.th]||{}).higherIsBetter)}</th>`;
+  }
+  head += '</tr>';
+  table.tHead.innerHTML = head;
+
+  const body = [];
+  for (const view of views){
+    const w = view.week;
+    const open = EXPANDED.has(w.key);
+    const n = view.hosts.length;
+    const cells = METRICS.map(m => {
+      const state = worstState(m.th, m.key, view) ?? grade(m.th, view.metrics[m.key]);
+      return `<td class="num">${withWhy(
+        totalPill(m.th, m.key, view, m.fmt(view.metrics[m.key])), state, m.key, view, '')}</td>`;
+    }).join('');
+
+    body.push(`<tr class="wkrow ${w.current ? 'current' : ''}" data-week="${esc(w.key)}" data-open="${open ? 1 : 0}">
+      <td class="l"><button class="exp"${n ? '' : ' disabled'} aria-expanded="${open}"
+            title="${n ? (open ? 'Hide' : 'Show') + ' the ' + n + ' applications' : 'No per-application data for this week'}"
+          ><span class="chev">▸</span></button>
+        <span class="wk" title="${esc(weekRangeTitle(w))}">${esc(w.isoLabel)}</span>
+        <span class="dates">${w.isoYear}</span>
+        ${w.partial ? '<span class="chip">in&nbsp;progress</span>' : ''}
+        ${view.derived ? '<span class="chip derived" title="Totals recalculated from the selected applications">subset</span>' : ''}</td>${cells}</tr>`);
+
+    // Applications are rendered as ordinary rows of the same table, so each
+    // value sits under the column heading it belongs to.
+    if (open && n) view.hosts.forEach((h, i) => {
+      const cell = (key, value, text) => {
+        const state = bandFor(key, value, h.th)?.state ?? grade(h.th && h.th[key], value);
+        return `<td class="num">${withWhy(pillHtml(key, value, text, h.th),
+          state, key, view, h.name)}</td>`;
+      };
+      body.push(`<tr class="hostrow${i === n-1 ? ' last' : ''}">
+        <td class="l">${esc(h.name)}</td>
+        ${cell('uptime', h.uptime, h.uptime == null ? '—' : fmtNum(h.uptime,3)+'%')}
+        ${cell('responseMs', h.responseMs, fmtNum(h.responseMs,0))}
+        ${cell('errors', h.errors, fmtInt(h.errors))}
+        ${cell('errorRate', h.errorRate, h.errorRate == null ? '—' : fmtNum(h.errorRate,4)+'%')}
+        ${cell('alerts', h.alerts, fmtInt(h.alerts))}</tr>`);
+    });
+  }
+  table.tBodies[0].innerHTML = body.join('');
+
+  wireWhy(table);
+
+  const toggle = k => { EXPANDED.has(k) ? EXPANDED.delete(k) : EXPANDED.add(k); renderTable(); };
+  table.tBodies[0].querySelectorAll('tr.wkrow').forEach(tr => {
+    const btn = tr.querySelector('.exp');
+    if (btn && btn.disabled) return;
+    tr.addEventListener('click', () => toggle(tr.dataset.week));
+    if (btn) btn.addEventListener('click', e => { e.stopPropagation(); toggle(tr.dataset.week); });
+  });
+}
+
+function applyTeamName(){
+  // team.name is who we are; team.title is what the page calls itself. Keeping
+  // them apart means the heading can read "... Dashboard" without that word
+  // leaking into anywhere the team is named.
+  const t = CFG.team || {};
+  const heading = t.title || t.name || '';
+  if (!heading) return;
+  document.title = heading;
+  const h1 = document.querySelector('.brand h1');
+  if (h1) h1.textContent = heading;
+}
+
+function render(){
+  applyTeamName();
+  renderHostFilter();
+  if (NAV === 'delivery'){
+    renderDvTopics();
+    renderDeliveryKpis();
+    DV_VIEW === 'trends' ? renderDeliveryCharts() : renderDelivery();
+  }
+  if (NAV === 'overview') renderMatrix(); renderKpis(); renderTable();
+  if (NAV === 'operations' && OPS_VIEW === 'trends') renderCharts();
+  document.getElementById('subtitle').textContent =
+    `weeks run Monday 00:00 to Sunday 23:59 ${tzAbbrev()}`;
+  document.getElementById('tzNote').textContent =
+    `Week boundaries computed in ${TZ} (${tzAbbrev()}), so DST shifts are handled.`;
+}
+
+/* ---------------- charts ---------------- */
+
+const PALETTE = ['#2b5fd9','#0f8a52','#c0392b','#a66a00','#7a4fd1','#0e7f96','#b8386f','#5c6b7a'];
+const TOTAL_COLOR = 'var(--ink)';
+
+const CHARTS = [
+  { key:'uptime',     title:'Uptime',                  unit:'%',  dp:3, th:'uptime',
+    host:h => h.uptime,     total:w => w.metrics.uptime },
+  { key:'responseMs', title:'Avg. web response time',  unit:' ms',dp:0, th:'responseMs',
+    host:h => h.responseMs, total:w => w.metrics.responseMs },
+  { key:'errors',     title:'Errors',                  unit:'',   dp:0, th:'errors',
+    host:h => h.errors,     total:w => w.metrics.errors },
+  { key:'errorRate',  title:'Error rate',              unit:'%',  dp:4, th:'errorRate',
+    host:h => h.errorRate,  total:w => w.metrics.errorRate },
+  { key:'alerts',     title:'Alerts',                  unit:'',   dp:0, th:'alerts',
+    host:h => h.alerts,     total:w => w.metrics.alerts,
+    note:'Open critical incidents on these applications.' }
+];
+
+let WEEKS_BY_APP = {};           // per application, so switching back is instant
+let CHART_OPTS = { total:true, range:26, partial:false };   // per-application lines always drawn
+
+/** Weeks to plot, oldest → newest, honouring the range and partial-week options. */
+function chartWeeks(){
+  let ws = WEEKS.slice();
+  if (!CHART_OPTS.partial) ws = ws.filter(w => !w.partial);
+  if (CHART_OPTS.range > 0) ws = ws.slice(0, CHART_OPTS.range);
+  return ws.reverse();
+}
+
+/** Stable host order: every facet value seen, alphabetical. */
+function hostOrder(ws){
+  const names = new Set();
+  ws.forEach(w => w.hosts.forEach(h => names.add(h.name)));
+  return [...names].sort((a,b) => a.localeCompare(b));
+}
+
+function seriesFor(chart, ws, hosts){
+  const out = [];
+  if (chart.host){
+    hosts.forEach((name, i) => hostPicked(name) && out.push({
+      id:name, label:name, color:PALETTE[i % PALETTE.length], width:1.6,
+      values: ws.map(w => {
+        const h = w.hosts.find(x => x.name === name);
+        const v = h ? chart.host(h) : null;
+        return (v == null || Number.isNaN(v)) ? null : Number(v);
+      })
+    }));
+  }
+  if (chart.total && (CHART_OPTS.total || chart.forceTotal)){
+    const lone = !!chart.forceTotal;       // the only line on the chart
+    out.push({
+      id:'__total__', label: lone ? (chart.title || '') : 'All applications',
+      color:TOTAL_COLOR, width: lone ? 1.8 : 2.2, dashed: !lone,
+      values: ws.map(w => { const v = chart.total(w); return (v == null || Number.isNaN(v)) ? null : Number(v); })
+    });
+  }
+  return out;
+}
+
+function niceTicks(min, max, count){
+  if (!(max > min)){ const c = min || 0; return [c - 1, c, c + 1].filter((_,i) => i < count); }
+  const raw = (max - min) / Math.max(1, count - 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1,1.5,2,2.5,5,10].map(m => m*mag).find(s => s >= raw) || 10*mag;
+  const start = Math.ceil(min/step)*step;
+  const ticks = [];
+  for (let v = start; v <= max + step*0.001; v += step) ticks.push(Math.round(v/step)*step);
+  return ticks;
+}
+
+function axisFmt(v, chart){
+  if (Object.is(v, -0)) v = 0;
+  const a = Math.abs(v);
+  if (chart.key === 'throughput' || chart.key === 'errors'){
+    if (a >= 1e9) return (v/1e9).toFixed(1).replace(/\.0$/,'') + 'B';
+    if (a >= 1e6) return (v/1e6).toFixed(1).replace(/\.0$/,'') + 'M';
+    if (a >= 1e3) return (v/1e3).toFixed(a >= 1e4 ? 0 : 1).replace(/\.0$/,'') + 'k';
+    return String(Math.round(v));
+  }
+  const dp = chart.dp === 0 ? 0 : (Math.abs(v) < 1 ? chart.dp : Math.min(chart.dp, 2));
+  return v.toFixed(dp);
+}
+const valFmt = (v, chart) => v == null ? '—'
+  : (chart.dp === 0 ? fmtInt(v) : fmtNum(v, chart.dp)) + chart.unit;
+
+const W = 560, H = 230, M = { t:12, r:14, b:26, l:52 };
+
+function buildChart(chart, ws, hosts){
+  const series = seriesFor(chart, ws, hosts);
+  const pts = series.flatMap(s => s.values).filter(v => v != null);
+
+  const card = document.createElement('div');
+  card.className = 'chartcard';
+  card.innerHTML = `<div class="head"><h2>${esc(chart.title)}</h2>
+    <span class="note">${esc(chart.note || '')}</span></div>`;
+
+  if (!ws.length || !pts.length){
+    card.insertAdjacentHTML('beforeend',
+      `<div class="empty" style="padding:26px 16px">No data for this metric in the selected range.</div>`);
+    if (hosts.length) card.appendChild(buildLegend(hosts));
+    return card;
+  }
+
+  let min = Math.min(...pts), max = Math.max(...pts);
+  // In the combined view the two applications have different targets, so a
+  // single guide line would be wrong for one of them.
+  const thrVal = (chart.th && !isCombined()) ? targetOf(chart.th) : null;
+  const span0 = (max - min) || Math.abs(max) * 0.1 || 1;
+  if (thrVal != null && thrVal >= min - span0 && thrVal <= max + span0){
+    min = Math.min(min, thrVal); max = Math.max(max, thrVal);
+  }
+  if (['errors','alerts','throughput'].includes(chart.key)) min = Math.min(min, 0);
+  // whole-number counts cannot be negative; without this a flat zero series
+  // pads into negative space and the axis shows "-0"
+  const counts = chart.dp === 0 && pts.every(v => v >= 0);
+  let span = (max - min) || Math.abs(max) * 0.1 || 1;
+  min -= span * 0.08; max += span * 0.08;
+  if (['errors','alerts','throughput'].includes(chart.key) && min < 0) min = 0;
+  if (counts && min < 0) min = 0;
+  if (counts && max < 1) max = 1;                              // a flat zero still needs a scale
+  if (chart.key === 'uptime' && max > 100) max = 100;          // uptime cannot exceed 100%
+  span = max - min;
+
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const xOf = i => ws.length === 1 ? M.l + iw/2 : M.l + (i/(ws.length-1))*iw;
+  const yOf = v => M.t + ih - ((v - min)/span)*ih;
+
+  let ticks = niceTicks(min, max, 6);
+  // a whole-number axis must not label 0.2 and 0.4 as "0" twice over
+  if (counts) ticks = [...new Set(ticks.map(t => Math.round(t)))]
+    .filter(t => t >= min - 1e-9 && t <= max + 1e-9);
+  const gridSvg = ticks.map(t =>
+    `<line x1="${M.l}" y1="${yOf(t).toFixed(1)}" x2="${M.l+iw}" y2="${yOf(t).toFixed(1)}"/>`).join('');
+  const tickLbl = ticks.map(t =>
+    `<text x="${M.l-8}" y="${(yOf(t)+3.5).toFixed(1)}" text-anchor="end">${esc(axisFmt(t, chart))}</text>`).join('');
+
+  const every = Math.max(1, Math.ceil(ws.length/6));
+  const xLbl = ws.map((w,i) => (i % every === 0 || i === ws.length-1)
+    ? `<text x="${xOf(i).toFixed(1)}" y="${H - M.b + 15}" text-anchor="middle">${esc(w.isoLabel)}</text>` : '').join('');
+
+  const paths = series.map(s => {
+    let d = '', pen = false;
+    s.values.forEach((v,i) => {
+      if (v == null){ pen = false; return; }
+      d += (pen ? ' L' : ' M') + xOf(i).toFixed(1) + ' ' + yOf(v).toFixed(1);
+      pen = true;
+    });
+    const dots = ws.length <= 30
+      ? s.values.map((v,i) => v == null ? '' :
+          `<circle cx="${xOf(i).toFixed(1)}" cy="${yOf(v).toFixed(1)}" r="2.2" fill="${s.color}"/>`).join('')
+      : '';
+    return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.width}"
+      stroke-linejoin="round" stroke-linecap="round"${s.dashed ? ' stroke-dasharray="6 3"' : ''}/>${dots}`;
+  }).join('');
+
+  const thrSvg = (thrVal != null && thrVal >= min && thrVal <= max)
+    ? `<line class="thr" x1="${M.l}" y1="${yOf(thrVal).toFixed(1)}" x2="${M.l+iw}" y2="${yOf(thrVal).toFixed(1)}"/>
+       <text class="thrlbl" x="${M.l+iw}" y="${(yOf(thrVal)-4).toFixed(1)}" text-anchor="end">target ${esc(axisFmt(thrVal, chart))}</text>`
+    : '';
+
+  const plot = document.createElement('div');
+  plot.className = 'plot';
+  plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="${esc(chart.title)} per application, week by week">
+      <g class="grid">${gridSvg}</g>
+      <g class="axis"><line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+ih}"/>
+        <line x1="${M.l}" y1="${M.t+ih}" x2="${M.l+iw}" y2="${M.t+ih}"/></g>
+      ${thrSvg}${tickLbl}${xLbl}${paths}
+      <g class="hover" hidden><line class="cross" y1="${M.t}" y2="${M.t+ih}"/><g class="hdots"></g></g>
+      <rect class="hit" x="${M.l}" y="${M.t}" width="${iw}" height="${ih}"/>
+    </svg><div class="tip" hidden></div>`;
+  card.appendChild(plot);
+  if (hosts.length) card.appendChild(buildLegend(hosts));
+
+  attachHover(plot, { chart, ws, series, xOf, yOf });
+  return card;
+}
+
+/** Legend chips are a second view of the header's application selection. */
+function buildLegend(names){
+  const wrap = document.createElement('div');
+  wrap.className = 'legend';
+  names.forEach((name, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-pressed', hostPicked(name) ? 'true' : 'false');
+    b.innerHTML = `<span class="sw" style="background:${PALETTE[i % PALETTE.length]}"></span>${esc(name)}`;
+    b.addEventListener('click', () => {
+      const all = allHostNames();
+      const cur = hfHosts() ? hfHosts().slice() : all.slice();
+      const at = cur.indexOf(name);
+      at >= 0 ? cur.splice(at, 1) : cur.push(name);
+      setHosts(cur, all);
+    });
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
+function attachHover(plot, ctx){
+  const svg = plot.querySelector('svg');
+  const hit = plot.querySelector('.hit');
+  const hov = plot.querySelector('.hover');
+  const line = hov.querySelector('.cross');
+  const dots = hov.querySelector('.hdots');
+  const tip = plot.querySelector('.tip');
+  const { chart, ws, series, xOf, yOf } = ctx;
+
+  // `hidden` is an HTMLElement property and does nothing on an SVG <g>,
+  // so toggle the attribute directly — the [hidden] CSS rule does the rest.
+  const show = (el, on) => on ? el.removeAttribute('hidden') : el.setAttribute('hidden', '');
+
+  const move = ev => {
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const x = (ev.clientX - rect.left) * (W / rect.width);
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < ws.length; i++){
+      const d = Math.abs(xOf(i) - x);
+      if (d < bestD){ bestD = d; best = i; }
+    }
+    const px = xOf(best);
+    line.setAttribute('x1', px.toFixed(1));
+    line.setAttribute('x2', px.toFixed(1));
+    dots.innerHTML = series.map(s => s.values[best] == null ? '' :
+      `<circle cx="${px.toFixed(1)}" cy="${yOf(s.values[best]).toFixed(1)}" r="3.6"
+        fill="${s.color}" stroke="var(--panel)" stroke-width="1.5"/>`).join('');
+    show(hov, true);
+
+    const w = ws[best];
+    tip.innerHTML = `<div class="th">${esc(w.isoLabel)} ${w.isoYear} · ${esc(w.startLabel)} → ${esc(w.endLabel)}</div>` +
+      series.map(s => `<div class="r"><span class="nm"><span class="sw" style="background:${s.color}"></span>${esc(s.label)}</span>
+        <span class="v">${esc(valFmt(s.values[best], chart))}</span></div>`).join('');
+    show(tip, true);
+    const left = (px / W) * rect.width;
+    tip.style.left = Math.max(90, Math.min(rect.width - 90, left)) + 'px';
+    tip.style.top = '6px';
+  };
+
+  hit.addEventListener('mousemove', move);
+  hit.addEventListener('mouseleave', () => { show(hov, false); show(tip, false); });
+}
+
+function renderCharts(){
+  const grid = document.getElementById('chartGrid');
+  const empty = document.getElementById('trendEmpty');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const ws = chartWeeks();
+  if (!ws.length){
+    empty.textContent = 'No weeks in this range yet — click Refresh, or widen the range above.';
+    empty.hidden = false; return;
+  }
+  empty.hidden = true;
+  const hosts = hostOrder(ws);
+  for (const chart of CHARTS){
+    if (!chart.host && !CHART_OPTS.total) continue;
+    grid.appendChild(buildChart(chart, ws, hosts));
+  }
+}
+
+const SECTIONS = {
+  overview:   { panel:'panelOverview',  btn:'navOverview'   },
+  operations: { panel:null,             btn:'navOperations' },
+  delivery:   { panel:null,             btn:'navDelivery'   }
+};
+const OPS_VIEWS = { history:'panelHistory', trends:'panelTrends' };
+const DV_VIEWS  = { history:'panelDeliveryHistory', trends:'panelDeliveryTrends' };
+
+let NAV = 'overview';
+let OPS_VIEW = 'history';
+let DV_VIEW = 'history';
+
+/**
+ * The provider filter belongs beside the week filter, but History and Trends
+ * each have their own bar. One picker, re-parented into whichever bar is on
+ * screen, keeps a single set of element ids and one piece of state.
+ */
+function placeProviderPicker(){
+  const picker = document.getElementById('appsBtn')?.parentElement;
+  if (!picker) return;
+  const host = (NAV === 'operations' && OPS_VIEW === 'trends')
+    ? document.getElementById('trendFilters')
+    : document.getElementById('histFilters');
+  if (!host || picker.parentElement === host) return;
+  const weeks = host.querySelector('label');          // the Weeks select
+  host.insertBefore(picker, weeks ? weeks.nextSibling : host.firstChild);
+}
+
+function showSection(section, view){
+  if (!SECTIONS[section]) section = 'overview';
+  NAV = section;
+  if (view && section === 'delivery' && DV_VIEWS[view]) DV_VIEW = view;
+  else if (view && OPS_VIEWS[view]) OPS_VIEW = view;
+
+  for (const [name, def] of Object.entries(SECTIONS)){
+    const btn = g(def.btn);
+    if (btn) btn.setAttribute('aria-selected', String(name === section));
+    if (def.panel) g(def.panel).hidden = name !== section;
+  }
+  const inOps = section === 'operations';
+  const inDv  = section === 'delivery';
+  g('opsSubtabs').hidden = !inOps;
+  g('dvSubtabs').hidden = !inDv;
+  g('dvKpis').hidden = !inDv;
+  placeProviderPicker();
+  for (const [name, panel] of Object.entries(OPS_VIEWS)){
+    g(panel).hidden = !inOps || name !== OPS_VIEW;
+    const btn = g('tabBtn' + name[0].toUpperCase() + name.slice(1));
+    if (btn) btn.setAttribute('aria-selected', String(inOps && name === OPS_VIEW));
+  }
+  for (const [name, panel] of Object.entries(DV_VIEWS)){
+    g(panel).hidden = !inDv || name !== DV_VIEW;
+    const btn = g('dvBtn' + name[0].toUpperCase() + name.slice(1));
+    if (btn) btn.setAttribute('aria-selected', String(inDv && name === DV_VIEW));
+  }
+
+  // The KPI strip and the entity pickers describe New Relic applications, so
+  // they belong to Operations only.
+  g('kpis').hidden = !inOps;
+  renderAppSelect();
+  renderHostFilter();
+
+  try {
+    localStorage.setItem('weeklyOpsNav',
+      JSON.stringify({ section, view: section === 'delivery' ? DV_VIEW : OPS_VIEW }));
+  } catch {}
+
+  if (section === 'overview') renderMatrix();
+  if (inDv){ renderDvTopics(); renderDeliveryKpis(); }
+  else g('dvTopics').hidden = true;
+  if (inDv && DV_VIEW === 'history') renderDelivery();
+  if (inDv && DV_VIEW === 'trends') renderDeliveryCharts();
+  if (inOps && OPS_VIEW === 'trends') renderCharts();
+}
+
+/** Back-compat for the handful of callers that still think in flat tabs. */
+function showTab(which){
+  if (which === 'delivery') return showSection('delivery');
+  if (which === 'overview') return showSection('overview');
+  return showSection('operations', which === 'trends' ? 'trends' : 'history');
+}
+
+/* ---------------- delivery (Jira) ---------------- */
+
+let DELIVERY = null;
+let JIRA_STATUS = null;   // what the local server's last refresh did
+
+/**
+ * Jira counts come from delivery.json, written by fetch_jira.py. The browser
+ * cannot query Jira itself: there is no CORS, the token must not reach the
+ * page, and the org's IP allowlist would refuse it anyway.
+ */
+let DELIVERY_WHY = 'not attempted';
+
+async function loadDelivery(){
+  try {
+    const res = await fetch('delivery.json', { cache:'no-store' });
+    if (!res.ok){ DELIVERY_WHY = `HTTP ${res.status} fetching delivery.json`; return false; }
+    const d = await res.json();
+    if (!d || !Array.isArray(d.weeks) || !d.weeks.length){
+      DELIVERY_WHY = 'delivery.json has no weeks'; return false;
+    }
+    DELIVERY = d;
+    DELIVERY_WHY = 'ok';
+    return true;
+  } catch (e){
+    DELIVERY_WHY = 'could not fetch delivery.json — ' + (e && e.message ? e.message : e);
+    return false;
+  }
+}
+
+/**
+ * Team health comes from a separate export, but it is weekly and on the same
+ * Monday-to-Sunday spine, so it is folded into the same week objects. Topics,
+ * table, charts and matrix then need no special case — the section on each
+ * metric is what puts it on its own tab.
+ */
+async function loadEngagement(){
+  let d = null;
+  try {
+    const res = await fetch('engagement.json', { cache:'no-store' });
+    if (!res.ok) return false;
+    d = await res.json();
+  } catch { return false; }
+  if (!d || !Array.isArray(d.weeks) || !Array.isArray(d.metrics)) return false;
+
+  ENGAGEMENT = d;
+  if (!DELIVERY){
+    // Jira may be absent or still fetching; team health can stand on its own.
+    DELIVERY = { site:null, project:null, metrics:[], weeks:[] };
+    DELIVERY_WHY = 'engagement only';
+  }
+  const byKey = new Map(DELIVERY.weeks.map(w => [w.key, w]));
+  for (const w of d.weeks){
+    const into = byKey.get(w.key);
+    if (into) Object.assign(into.metrics, w.metrics || {});
+    else { DELIVERY.weeks.push(w); byKey.set(w.key, w); }
+  }
+  DELIVERY.weeks.sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : 0));
+  const have = new Set(DELIVERY.metrics.map(m => m.key));
+  for (const m of d.metrics) if (!have.has(m.key)) DELIVERY.metrics.push(m);
+  return true;
+}
+let ENGAGEMENT = null;
+
+/**
+ * The local server is a long-running process: edits to server.py only take
+ * effect on restart. If the endpoints this page needs are missing, that is
+ * almost always why — worth saying rather than leaving a blank tab.
+ */
+let SERVER_STALE = false;
+async function checkServerFreshness(){
+  if (!SERVER) return;
+  try {
+    const res = await fetch('/api/jira-status', { cache:'no-store' });
+    SERVER_STALE = !res.ok;
+  } catch { SERVER_STALE = true; }
+  if (SERVER_STALE){
+    banner('bad', '<strong>The running server is out of date.</strong> It does not serve '
+      + '<code>/api/jira-status</code>, which means it was started before the current '
+      + '<code>server.py</code>. Stop it and run <code>python3 server.py</code> again — '
+      + 'a running Python process does not pick up edits to its own source.');
+  }
+}
+
+/** Jira link for one cell, so every number can be opened as a real issue list. */
+function jiraLink(jql){
+  if (!DELIVERY || !DELIVERY.site || !jql) return null;
+  return DELIVERY.site.replace(/\/$/, '') + '/issues/?jql=' + encodeURIComponent(jql);
+}
+
+const INFO_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+  + ' stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/>'
+  + '<path d="M12 11v5"/><path d="M12 7.6v.2"/></svg>';
+
+/**
+ * Info icon beside a Jira metric's title: hovering shows the exact JQL, and
+ * clicking opens it in Jira. Uses the newest week in view, since the query is
+ * identical apart from its date bounds.
+ */
+function jiraInfoIcon(metricKey, week, label){
+  const jql = week && week.jql ? week.jql[metricKey] : null;
+  // Sprint-scoped metrics come from the board's sprint report, not a search,
+  // so they carry their own link and explanation instead of a JQL.
+  const direct = week && week.links ? week.links[metricKey] : null;
+  const note = week && week.notes ? week.notes[metricKey] : null;
+  const href = direct || jiraLink(jql);
+  if (!href) return '';
+  const tip = jql
+    ? `${label} — JQL for ${week.isoLabel} ${week.isoYear}:\n\n${jql}`
+    : `${label} — ${week.isoLabel} ${week.isoYear}:\n\n${note || 'Jira sprint report'}`;
+  return `<a class="infoi" href="${esc(href)}" target="_blank" rel="noreferrer"
+    title="${esc(tip)}" aria-label="${esc((jql ? 'Open the JQL for ' : 'Open the Jira page behind ') + label)}"
+    onclick="event.stopPropagation()">${INFO_SVG}</a>`;
+}
+
+/** Lower is better for bugs arriving; higher is better for work completed. */
+// true where a bigger number is the better one. An open backlog growing is
+// not good news, so openTickets reads the other way.
+const DV_DIRECTION = { bugsCreated:false, bugsResolved:true, ticketsResolved:true,
+                       bugsHighAged90:false, bugsMediumAged90:false, openTickets:false,
+                       bugsOpen:false,
+                       sprintAdded:false, cycleTimeDays:false,
+                       // Tech debt arriving is bad news; tech debt cleared is good.
+                       techDebtCreated:false, techDebtResolved:true, techDebtOpen:false,
+                       techDebtHighAged90:false, techDebtMediumAged90:false,
+                       // More people answering, and happier answers, are better.
+                       ovParticipationRate:true, ovEnps:true, ovEngagement:true };
+// Participants mostly tracks headcount, so it is reported rather than judged.
+
+// The size of a plan is not itself good or bad — a bigger sprint is not a
+// better one — so sprintPlanned is left uncoloured rather than given a
+// direction it does not have.
+const DV_NEUTRAL = new Set(['sprintPlanned', 'capacityAvailable', 'ovParticipants']);
+
+/* Capacity is a sum of fractions — 0.4 of a person is a real value — so it is
+   the one Jira figure that is not a whole count. */
+const DV_FRACTIONAL = new Set(['capacityAvailable', 'cycleTimeDays', 'ovEngagement']);
+
+/* A unit is written where it reads best, and only there. A symbol belongs on
+   the number — 43% — while a word belongs in the column heading, because
+   "43 person-weeks" in every cell is noise. So each unit appears once: on the
+   values or on the heading, never both. */
+const DV_SYMBOL_UNITS = new Set(['%']);
+
+/**
+ * A delivery metric's band, when it has one.
+ *
+ * Most of these counts have no target — a week with four resolved tickets is
+ * not "green" in any absolute sense — so they stay uncoloured. The engagement
+ * scores are the exception: the team set targets for them, so they are graded
+ * against those and nothing else is.
+ */
+function dvBandFor(key, v){
+  const m = ((DELIVERY && DELIVERY.metrics) || []).find(x => x.key === key);
+  if (!m || !Array.isArray(m.bands)) return { state:'none' };
+  return bandFor(key, v, { [key]: { bands: m.bands } });
+}
+const dvTarget = (key) => {
+  const m = ((DELIVERY && DELIVERY.metrics) || []).find(x => x.key === key);
+  const good = (m && m.bands || []).find(b => b.state === 'good');
+  return good && good.label ? good.label : null;
+};
+const dvUnitOf = (key) => {
+  const m = ((DELIVERY && DELIVERY.metrics) || []).find(x => x.key === key);
+  return (m && m.unit) || '';
+};
+const dvIsSymbol = (key) => DV_SYMBOL_UNITS.has(dvUnitOf(key));
+const dvFmt = (key, v, withUnit = true) => v == null ? '\u2014'
+  : (DV_FRACTIONAL.has(key) ? fmtNum(v, 1) : fmtInt(v))
+    + (withUnit && dvIsSymbol(key) ? dvUnitOf(key) : '');
+
+/**
+ * Delivery is two unrelated conversations — how bugs are being dealt with, and
+ * what the team is shipping — and showing eight columns at once made both
+ * harder to read. One topic at a time, chosen on the sub-tab bar, so the cards,
+ * the table and the charts all narrow together.
+ *
+ * The sections come from the data rather than a fixed list, so adding a metric
+ * under a new section in config.json grows the tab bar by itself.
+ */
+const DV_FALLBACK_SECTION = 'Bug fixes (metrics)';
+const dvSectionOf = (m) => m.section || DV_FALLBACK_SECTION;
+let DV_TOPIC = null;
+
+function dvTopics(){
+  const seen = [];
+  for (const m of (DELIVERY && DELIVERY.metrics) || []){
+    const sec = dvSectionOf(m);
+    if (!seen.includes(sec)) seen.push(sec);
+  }
+  return seen;
+}
+
+/** The metrics on screen: the chosen topic, or everything if there is no split. */
+function dvMetrics(){
+  const all = (DELIVERY && DELIVERY.metrics) || [];
+  const topics = dvTopics();
+  if (topics.length < 2) return all;
+  if (!topics.includes(DV_TOPIC)) DV_TOPIC = topics[0];
+  return all.filter(m => dvSectionOf(m) === DV_TOPIC);
+}
+
+function renderDvTopics(){
+  const nav = document.getElementById('dvTopics');
+  if (!nav) return;
+  const topics = dvTopics();
+  nav.hidden = topics.length < 2;
+  if (nav.hidden){ nav.innerHTML = ''; return; }
+  if (!topics.includes(DV_TOPIC)) DV_TOPIC = topics[0];
+  nav.innerHTML = topics.map(t =>
+    `<button role="tab" data-topic="${esc(t)}" aria-selected="${t === DV_TOPIC}">${esc(t)}</button>`
+  ).join('');
+  nav.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    DV_TOPIC = b.dataset.topic;
+    renderDvTopics();
+    renderDeliveryKpis();
+    DV_VIEW === 'trends' ? renderDeliveryCharts() : renderDelivery();
+  }));
+}
+
+function renderDelivery(){
+  const table = document.getElementById('dvTable');
+  const empty = document.getElementById('dvEmpty');
+  const note = document.getElementById('dvNote');
+  if (!table) return;
+
+  if (!DELIVERY){
+    table.hidden = true; empty.hidden = false;
+    note.textContent = '';
+    const st = JIRA_STATUS;
+    empty.innerHTML = (st && st.state === 'failed')
+      ? 'The last Jira fetch failed: <strong>' + esc(st.message || '') + '</strong>'
+      : (st && st.state === 'running')
+        ? 'Fetching from Jira now — this can take a minute.'
+        : (st && st.state === 'skipped')
+          ? 'Jira is not configured: ' + esc(st.detail || st.message || '')
+          : 'No Jira data yet. Run <code>python3 fetch_jira.py</code> on a machine '
+            + 'the Atlassian IP allowlist permits, then reload.';
+    return;
+  }
+
+  let weeks = DELIVERY.weeks.slice();
+  if (HFILTER.range > 0) weeks = weeks.slice(0, HFILTER.range);
+  if (!weeks.length){
+    table.hidden = true; empty.hidden = false;
+    empty.textContent = 'No weeks in this range.';
+    return;
+  }
+  table.hidden = false; empty.hidden = true;
+
+  const metrics = dvMetrics();
+  const chrono = weeks.slice().reverse();
+  const when = DELIVERY.generatedAt
+    ? new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour12:false,
+        day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit', timeZoneName:'short' })
+        .format(new Date(DELIVERY.generatedAt))
+    : '';
+  note.textContent = esc(DELIVERY.project || '') + ' \u00b7 ' + weeks.length
+    + ' of ' + DELIVERY.weeks.length + ' weeks' + (when ? ' \u00b7 taken ' + when : '');
+
+  let head = '<tr><th class="l">Week</th>';
+  for (const m of metrics){
+    // Short name in the heading, unit on its own line, full wording on hover.
+    // Six full labels across is wider than any laptop, and a table you have to
+    // scroll sideways is one you cannot read a row of.
+    const name = m.short || m.label;
+    head += '<th title="' + esc(m.label) + '">' + esc(name)
+      + (m.unit && !DV_SYMBOL_UNITS.has(m.unit)
+          ? '<span class="u">' + esc(m.unit) + '</span>' : '')
+      + jiraInfoIcon(m.key, weeks[0], m.label)
+      + sparkline(chrono.map(w => (w.metrics && w.metrics[m.key] != null) ? w.metrics[m.key] : null),
+                  DV_NEUTRAL.has(m.key) ? null : DV_DIRECTION[m.key]) + '</th>';
+  }
+  head += '</tr>';
+  table.tHead.innerHTML = head;
+
+  table.tBodies[0].innerHTML = weeks.map(w => {
+    const cells = metrics.map(m => {
+      const v = w.metrics ? w.metrics[m.key] : null;
+      const band = dvBandFor(m.key, v);
+      const txt = band.state === 'none'
+        ? dvFmt(m.key, v)
+        : `<span class="pill ${band.state}" title="${esc(dvTarget(m.key) || '')}">`
+          + `${dvFmt(m.key, v)}</span>`;
+      const href = jiraLink(w.jql ? w.jql[m.key] : null);
+      // no red/amber banding here: arrival and completion counts have no
+      // service target, and colouring them invites gaming the number
+      return '<td class="num">' + (href
+        ? '<a class="dvlink" href="' + esc(href) + '" target="_blank" rel="noreferrer"'
+          + ' title="Open this week\'s issues in Jira">' + txt + '</a>'
+        : txt) + '</td>';
+    }).join('');
+    return '<tr class="' + (w.current ? 'current' : '') + '">'
+      + '<td class="l"><span class="wk" title="' + esc(weekRangeTitle(w)) + '">'
+      + esc(w.isoLabel) + '</span> <span class="dates">' + w.isoYear + '</span>'
+      + (w.partial ? '<span class="chip">in&nbsp;progress</span>' : '')
+      + '</td>' + cells + '</tr>';
+  }).join('');
+
+  // A refresh problem deserves a word; the routine label does not. And a
+  // structural reason — the board having no sprints, say — is not a transient
+  // cell failure, so say what it was instead of counting it, or two empty
+  // columns just look like a bug.
+  const fails = DELIVERY.failures || [];
+  const scope = document.getElementById('dvScope');
+  if (!fails.length){
+    scope.textContent = '';
+    scope.removeAttribute('title');
+  } else {
+    const one = fails.length === 1 ? fails[0] : fails.length + ' metrics could not be fetched';
+    scope.textContent = one.length > 120 ? one.slice(0, 117) + '…' : one;
+    scope.title = fails.join('\n');
+  }
+}
+
+async function loadJiraStatus(){
+  try {
+    const res = await fetch('/api/jira-status', { cache:'no-store' });
+    if (!res.ok) return null;
+    JIRA_STATUS = await res.json();
+    return JIRA_STATUS;
+  } catch { return null; }
+}
+
+/**
+ * Locally the server refreshes Jira in the background, so the file may arrive
+ * after the page. Poll while it is running, and when it is not, say what
+ * actually went wrong rather than leaving the tab blank.
+ */
+async function watchForDelivery(){
+  let tries = 0;
+  const tick = async () => {
+    if (await loadDelivery()){
+      if (NAV === 'delivery'){
+        renderDvTopics();
+        renderDeliveryKpis();
+        DV_VIEW === 'trends' ? renderDeliveryCharts() : renderDelivery();
+      }
+      if (NAV === 'overview') renderMatrix();
+      liveBanner();                      // now carries the Jira timestamp too
+      banner('good', 'Jira delivery data has just finished loading.');
+      return true;
+    }
+    const st = await loadJiraStatus();
+    if (st && st.state !== 'running'){
+      reportJiraProblem(st);
+      return true;                       // settled, nothing more to wait for
+    }
+    return ++tries > 60;                 // ~3 minutes of "running"
+  };
+  if (await tick()) return;
+  const timer = setInterval(async () => { if (await tick()) clearInterval(timer); }, 3000);
+}
+
+function reportJiraProblem(st){
+  if (!st || st.state === 'ok') return;
+  const detail = (st.detail || '').trim().split('\n').filter(Boolean).slice(-4).join('\n');
+  if (st.state === 'failed'){
+    banner('bad', `<strong>Jira data could not be fetched.</strong> ${esc(st.message || '')}`
+      + (detail ? `<pre class="diag" style="margin-top:8px">${esc(detail)}</pre>` : '')
+      + `<div class="acts"><button class="btn sm" onclick="retryJira(this)">Try again</button></div>`);
+  } else if (st.state === 'skipped'){
+    banner('warn', `<strong>Jira is not configured.</strong> ${esc(st.detail || st.message || '')}`
+      + ' Put your Atlassian email and API token in <code>jira_token.txt</code> and restart the server.');
+  }
+  if (NAV === 'delivery'){
+    renderDvTopics();
+    renderDeliveryKpis();
+    DV_VIEW === 'trends' ? renderDeliveryCharts() : renderDelivery();
+  }
+  if (NAV === 'overview') renderMatrix();
+}
+
+async function retryJira(btn){
+  if (btn){ btn.disabled = true; btn.textContent = 'Fetching…'; }
+  try { await fetch('/api/jira-refresh', { method:'POST' }); } catch {}
+  clearBanners();
+  banner('warn', 'Fetching from Jira — this can take a minute.');
+  watchForDelivery();
+}
+window.retryJira = retryJira;
+
+/**
+ * Current-week cards for Delivery, built like the Operations ones: the last
+ * complete week, with the change against the week before.
+ *
+ * The big number is left uncoloured. Operations colours it by SLA band, and
+ * these counts have no SLA — a week with more resolved bugs is not "green".
+ * The change itself does carry a direction, so that is coloured: fewer bugs
+ * arriving is good, more work completed is good.
+ */
+function renderDeliveryKpis(){
+  const host = document.getElementById('dvKpis');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!DELIVERY || !DELIVERY.weeks.length) return;
+
+  if (!DELIVERY.weeks[0]) return;
+
+  // Per metric, the newest week that actually has a figure, and the one before
+  // it. Not every metric reports every week — a survey may still be open, a
+  // week's scores may be withheld for anonymity, a point-in-time metric only
+  // has the current week. Pinning every card to week zero would show a column
+  // of dashes and hide numbers that exist a row below.
+  const latestTwo = (key) => {
+    const out = [];
+    for (const w of DELIVERY.weeks){
+      if (w.metrics && w.metrics[key] != null){ out.push(w); if (out.length === 2) break; }
+    }
+    return out;
+  };
+
+  for (const m of dvMetrics()){
+    const [cur, prev] = latestTwo(m.key);
+    const week = cur || DELIVERY.weeks[0];
+    const v = cur ? cur.metrics[m.key] : null;
+    const pv = prev ? prev.metrics[m.key] : null;
+    const partial = !!week.partial;
+
+    const neutral = DV_NEUTRAL.has(m.key);
+    const sprint = m.mode === 'sprint';
+    // When the figure is older than this week, the card says which week it is
+    // from rather than implying it is current.
+    const stale = cur && cur !== DELIVERY.weeks[0];
+    let sub = stale
+      ? `${esc(cur.isoLabel)} ${cur.isoYear} · latest available`
+      : `${partial && !sprint ? 'In progress' : 'Week'} · ${week.isoLabel} ${week.isoYear}`;
+    let dotClass = '';
+    if (v != null && pv != null && v !== pv){
+      const diff = v - pv;
+      const higherIsBetter = DV_DIRECTION[m.key] !== false;
+      const better = higherIsBetter ? diff > 0 : diff < 0;
+      const cls = neutral ? '' : (better ? 'good' : 'bad');
+      dotClass = cls ? 'bg-' + cls : '';
+      sub = `<span class="${cls ? 's-' + cls : ''}">${diff > 0 ? '▲' : '▼'} `
+          + `${dvFmt(m.key, Math.abs(diff), false)}</span> vs ${esc(prev.isoLabel)}`
+          // A sprint figure is set once and repeats across the sprint's weeks,
+          // so "so far" would be wrong — it is not accumulating. Nor does it
+          // apply to a figure from an earlier, finished week.
+          + (partial && !sprint && !stale ? ' <span class="sofar">so far</span>' : '');
+    }
+
+    // A metric with a target is coloured by it; one without keeps its number
+    // plain and lets only the change carry a colour.
+    const band = dvBandFor(m.key, v);
+    if (band.state !== 'none') dotClass = 'bg-' + band.state;
+    const el = document.createElement('div');
+    el.className = 'kpi';
+    el.innerHTML = `<div class="lbl">${esc(m.label)}</div>
+      <div class="val${band.state === 'none' ? '' : ' s-' + band.state}"`
+      + `${band.state === 'none' ? '' : ` title="${esc(dvTarget(m.key) || '')}"`}>`
+      + `${dvFmt(m.key, v)}</div>
+      <div class="sub"><span class="dot ${dotClass}"></span>${sub}</div>`;
+    host.appendChild(el);
+  }
+}
+
+/* ---------------- delivery trends ---------------- */
+
+let DV_OPTS = { range: 26, partial: false };
+
+/**
+ * One chart per Jira metric, drawn with the same machinery as the Operations
+ * charts. There is no per-provider breakdown here, so each chart carries a
+ * single line and no target band — these are counts, not service levels.
+ */
+function renderDeliveryCharts(){
+  const grid = document.getElementById('dvChartGrid');
+  const empty = document.getElementById('dvChartEmpty');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (!DELIVERY){
+    empty.hidden = false;
+    empty.innerHTML = (JIRA_STATUS && JIRA_STATUS.state === 'failed')
+      ? 'The last Jira fetch failed: <strong>' + esc(JIRA_STATUS.message || '') + '</strong>'
+      : 'No Jira data yet.';
+    return;
+  }
+
+  let ws = DELIVERY.weeks.slice();
+  if (!DV_OPTS.partial) ws = ws.filter(w => !w.partial);
+  if (DV_OPTS.range > 0) ws = ws.slice(0, DV_OPTS.range);
+  ws = ws.reverse();                       // oldest first, like the other charts
+
+  if (!ws.length){
+    empty.hidden = false;
+    empty.textContent = 'No weeks in this range.';
+    return;
+  }
+  empty.hidden = true;
+
+  dvMetrics().forEach((m, i) => {
+    const chart = {
+      key: m.key,
+      title: m.label,
+      unit: '',
+      dp: DV_FRACTIONAL.has(m.key) ? 1 : 0,
+      th: null,                            // no banding, so no guide line
+      host: null,
+      forceTotal: true,
+      total: w => (w.metrics && w.metrics[m.key] != null) ? w.metrics[m.key] : null,
+      note: m.section || ''
+    };
+    const card = buildChart(chart, ws, []);
+    // recolour the single line per metric, so the charts are tellable apart
+    card.querySelectorAll('.plot path[stroke]').forEach(pth => {
+      if (pth.getAttribute('stroke') === TOTAL_COLOR)
+        pth.setAttribute('stroke', PALETTE[i % PALETTE.length]);
+    });
+    card.querySelectorAll('.plot circle[fill]').forEach(c => {
+      if (c.getAttribute('fill') === TOTAL_COLOR)
+        c.setAttribute('fill', PALETTE[i % PALETTE.length]);
+    });
+    const h2 = card.querySelector('h2');
+    if (h2) h2.insertAdjacentHTML('beforeend', jiraInfoIcon(m.key, DELIVERY.weeks[0], m.label));
+    grid.appendChild(card);
+  });
+}
+
+/* ---------------- weekly KPI matrix ---------------- */
+
+/**
+ * The order the Overview matrix puts its sections in, matching the team's
+ * spreadsheet. The Delivery tab's topic tabs keep their own order — the two
+ * answer different questions, and bugs are the usual starting point there.
+ */
+const MX_SECTION_ORDER = [
+  'OfficeVibe Engagement',
+  'Bug fixes (metrics)',
+  'Delivery & Cycle time',
+  'Tech Debt'
+];
+
+/** "26-CW14", the label the team's spreadsheet uses. */
+const cwLabel = w => `${String(w.isoYear).slice(-2)}-CW${String(w.isoLabel).replace(/^W/, '')}`;
+
+const MX_FMT = {
+  uptime:     v => fmtNum(v, 2),
+  responseMs: v => fmtInt(v),
+  errors:     v => fmtInt(v),
+  errorRate:  v => fmtNum(v, 4),
+  alerts:     v => fmtInt(v)
+};
+const MX_OPS = [
+  ['uptime',     'Uptime (%)'],
+  ['responseMs', 'Avg. web response time (ms)'],
+  ['errors',     'Errors (total)'],
+  ['errorRate',  'Error rate (%)'],
+  ['alerts',     'Alerts']
+];
+
+function renderMatrix(){
+  const table = document.getElementById('mxTable');
+  const empty = document.getElementById('mxEmpty');
+  if (!table) return;
+
+  const range = Number(document.getElementById('mxRange')?.value ?? 26) || 0;
+  // chronological, like the spreadsheet: oldest column on the left
+  let weeks = WEEKS.slice();
+  if (range > 0) weeks = weeks.slice(0, range);
+  weeks = weeks.reverse();
+
+  if (!weeks.length){
+    table.hidden = true; empty.hidden = false;
+    empty.innerHTML = 'No weeks loaded yet.';
+    return;
+  }
+  table.hidden = false; empty.hidden = true;
+
+  const app = appById(CFG.appId) || apps()[0] || null;
+  const th = thFor(app);
+  const providers = (() => {
+    const seen = new Set();
+    weeks.forEach(w => (w.hosts || []).forEach(h => seen.add(h.name)));
+    return [...seen].sort((a,b) => a.localeCompare(b));
+  })();
+
+  const dvByKey = new Map();
+  (DELIVERY?.weeks || []).forEach(w => dvByKey.set(w.key, w));
+
+  table.tHead.innerHTML = '<tr><th class="rowlab">KPIs / calendar week</th>'
+    + weeks.map(w => `<th title="${esc(weekRangeTitle(w))}">${esc(cwLabel(w))}</th>`).join('')
+    + '</tr>';
+
+  const rows = [];
+  const group = label =>
+    rows.push(`<tr class="grp"><td class="rowlab">${esc(label)}</td>`
+      + weeks.map(() => '<td></td>').join('') + '</tr>');
+
+  // Jira first, matching the spreadsheet's order. No banding: arrival and
+  // completion counts have no service target.
+  if (!DELIVERY){
+    group('Bug fixes (metrics) — no Jira data');
+  } else {
+    const newest = DELIVERY.weeks[0];
+    // The Overview matrix is the whole picture by design — the Delivery tab's
+    // topic split does not apply here, it groups by section instead.
+    const metrics = DELIVERY.metrics || [];
+    // Each metric names its own section, so adding a KPI later is a config
+    // change rather than a code change. Older delivery.json files predate the
+    // field, hence the fallback.
+    const sectionOf = m => m.section
+      || (m.key === 'ticketsResolved' ? 'Delivery & Cycle time' : 'Bug fixes (metrics)');
+    const order = [];
+    const bySection = new Map();
+    for (const m of metrics){
+      const sec = sectionOf(m);
+      if (!bySection.has(sec)){ bySection.set(sec, []); order.push(sec); }
+      bySection.get(sec).push(m);
+    }
+    // The matrix follows the spreadsheet's running order, which is not the
+    // order the metrics happen to arrive in — engagement sits above the bug
+    // numbers there. Sections not listed keep their natural position after the
+    // ones that are, so a new section appears without touching this.
+    const rank = sec => {
+      const i = MX_SECTION_ORDER.indexOf(sec);
+      return i < 0 ? MX_SECTION_ORDER.length : i;
+    };
+    order.sort((a, b) => rank(a) - rank(b) || order.indexOf(a) - order.indexOf(b));
+    for (const sec of order){
+      group(sec);
+      for (const m of bySection.get(sec)){
+        // The ops rows name their unit — "Uptime (%)" — so these do too, unless
+        // the label already carries it.
+        const unit = m.unit && !DV_SYMBOL_UNITS.has(m.unit)
+          && !m.label.includes(m.unit) && !m.label.includes('(')
+          ? ` (${m.unit})` : '';
+        rows.push(`<tr><td class="rowlab">${esc(m.label + unit)}`
+          + jiraInfoIcon(m.key, newest, m.label) + `</td>` + weeks.map(w => {
+          const v = dvByKey.get(w.key)?.metrics?.[m.key];
+          const band = dvBandFor(m.key, v);
+          return `<td class="v ${band.state}">${v == null ? '' : dvFmt(m.key, v)}</td>`;
+        }).join('') + '</tr>');
+      }
+    }
+  }
+
+  for (const [key, label] of MX_OPS){
+    group(`${label} — ${esc((app && app.name) || '')}`);
+    for (const p of providers){
+      rows.push(`<tr><td class="rowlab">${esc(p)}</td>` + weeks.map(w => {
+        const h = (w.hosts || []).find(x => x.name === p);
+        const v = h ? h[key] : null;
+        const state = bandFor(key, v, h?.th || th).state;
+        const cell = v == null ? '' : MX_FMT[key](v);
+        // The same explanation the History table offers. withWhy() wants a
+        // view, and the matrix works in raw weeks, so one is made for it.
+        return `<td class="v ${state}">`
+          + (cell ? withWhy(cell, state, key, { week: w, hosts: w.hosts || [] }, p) : '')
+          + `</td>`;
+      }).join('') + '</tr>');
+    }
+  }
+
+  table.tBodies[0].innerHTML = rows.join('');
+  wireWhy(table);
+
+  const note = document.getElementById('mxNote');
+  if (note) note.textContent =
+    `${weeks.length} weeks · ${cwLabel(weeks[0])} → ${cwLabel(weeks[weeks.length-1])}`;
+  const scope = document.getElementById('mxScope');
+  if (scope) scope.textContent = '';
+}
+
+/* ---------------- CSV ---------------- */
+
+function exportCsv(){
+  // Exports exactly what the History tab is showing, filters included.
+  const views = filteredViews();
+  if (!views.length) return;
+  const q = v => (v == null || Number.isNaN(v)) ? '' : String(v);
+  const lines = [['scope','iso_week','week_start','week_end','host','uptime_pct','avg_response_ms',
+                  'errors','error_rate_pct','alerts','throughput'].join(',')];
+  for (const view of views.slice().reverse()){
+    const w = view.week;
+    const s = new Date(w.startMs).toISOString(), e = new Date(w.endMs-1).toISOString();
+    lines.push([view.derived ? 'subtotal' : 'total', `${w.isoYear}-${w.isoLabel}`, s, e,
+      view.derived ? 'SELECTED' : 'ALL',
+      q(view.metrics.uptime),q(view.metrics.responseMs),
+      q(view.metrics.errors),q(view.metrics.errorRate),q(view.metrics.alerts),''].join(','));
+    for (const h of view.hosts)
+      lines.push(['host',`${w.isoYear}-${w.isoLabel}`,s,e,`"${String(h.name).replace(/"/g,'""')}"`,
+        q(h.uptime),q(h.responseMs),q(h.errors),q(h.errorRate),q(h.alerts),q(h.throughput)].join(','));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'}));
+  a.download = `weekly-ops-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---------------- diagnostics ---------------- */
+
+function diagText(){
+  const head = `Application ${DIAG.app || (currentApp()||{}).name} · account ${CFG.accountId} · region ${CFG.region}\n` +
+    (DIAG.week ? `Week ${DIAG.week.key}  SINCE ${DIAG.week.startMs} UNTIL ${DIAG.week.endMs}\n` +
+                 `(${new Date(DIAG.week.startMs).toISOString()} → ${new Date(DIAG.week.endMs).toISOString()})\n` : '');
+  return head + '\n' + DIAG.queries.map(q =>
+    `── ${q.name} ──\n${q.nrql}\n\n${q.error ? 'ERROR: ' + q.error : JSON.stringify(q.results, null, 2)}\n`
+  ).join('\n');
+}
+
+function jiraDiagHtml(){
+  const rows = [];
+  rows.push(['delivery.json', DELIVERY
+    ? `loaded — ${DELIVERY.weeks.length} weeks, project ${esc(DELIVERY.project || '?')}`
+    : `not loaded — ${esc(DELIVERY_WHY)}`]);
+  rows.push(['page served from', esc(location.origin + location.pathname)]);
+  rows.push(['local server', SERVER ? (SERVER_STALE ? 'detected, but OUT OF DATE — restart server.py'
+                                                     : 'detected') : 'not detected (static mode)']);
+  if (DELIVERY){
+    rows.push(['taken', esc(DELIVERY.generatedAt || '?')]);
+    rows.push(['account timezone', esc(DELIVERY.accountTimeZone || '?')
+      + ' (JQL dates are read in this zone)']);
+    rows.push(['metrics', (DELIVERY.metrics || []).map(m => esc(m.label)).join(', ')]);
+    const bd = DELIVERY.board;
+    if (bd){
+      rows.push(['board', esc(`${bd.id} ${bd.name || ''} — type ${bd.type || '?'}`
+        + (bd.supportsSprints === false ? ', no sprints' : `, ${bd.sprints ?? '?'} sprint(s)`))]);
+      if (bd.why) rows.push(['sprint metrics', esc(bd.why)]);
+    }
+    const w = DELIVERY.weeks[0] || {};
+    rows.push(['newest week', `${esc(w.key || '?')} → ${JSON.stringify(w.metrics || {})}`]);
+    const bad = (DELIVERY.failures || []).length;
+    rows.push(['failed cells', bad ? `${bad} — see the fetcher output` : 'none']);
+  }
+  if (JIRA_STATUS){
+    rows.push(['last refresh', `${esc(JIRA_STATUS.state)} — ${esc(JIRA_STATUS.message || '')}`]);
+  }
+  rows.push(['shown on screen', `${(DELIVERY?.weeks || []).length} weeks available, `
+    + `week filter = ${HFILTER.range || 'all'}`]);
+  return `<div class="diagq"><h3>Jira delivery data</h3><pre class="diag">`
+    + rows.map(([k, v]) => `${k.padEnd(18)} ${v}`).join('\n') + '</pre></div>';
+}
+
+function openDiag(){
+  const body = document.getElementById('diagBody');
+  if (!DIAG.queries.length){
+    body.innerHTML = jiraDiagHtml()
+      + '<p style="color:var(--ink-3);font-size:13px">No New Relic queries recorded yet — click Refresh.</p>';
+  } else {
+    const w = DIAG.week;
+    body.innerHTML =
+      `<p style="font-size:12.5px;color:var(--ink-2);margin-top:0">
+        Account <strong>${esc(CFG.accountId)}</strong> · region <strong>${esc(CFG.region)}</strong> ·
+        ${esc(DIAG.app || '')}${w ? ` · week <strong>${esc(w.key)}</strong>
+        (${esc(new Date(w.startMs).toISOString())} → ${esc(new Date(w.endMs).toISOString())})` : ''}.
+        Paste any query below into New Relic's query builder to compare.</p>` +
+      DIAG.queries.map(q => {
+        const n = Array.isArray(q.results) ? q.results.length : 0;
+        const badge = q.error ? '<span class="pill bad">error</span>'
+          : n === 0 ? '<span class="pill warn">0 rows</span>'
+          : `<span class="pill good">${n} row${n>1?'s':''}</span>`;
+        return `<div class="diagq"><h3>${esc(q.name)} ${badge}</h3>
+          <pre class="diag">${esc(q.nrql)}</pre>
+          <pre class="diag">${esc(q.error ? q.error : JSON.stringify(q.results, null, 2))}</pre></div>`;
+      }).join('') + jiraDiagHtml();
+  }
+  document.getElementById('scrim').hidden = false;
+  document.getElementById('diag').hidden = false;
+}
+function closeDiag(){ document.getElementById('scrim').hidden = true; document.getElementById('diag').hidden = true; }
+
+/* ---------------- settings ---------------- */
+
+const g = id => document.getElementById(id);
+const splitLines = s => String(s||'').split(/[\s,]+/).map(x => x.trim()).filter(Boolean);
+const splitCommas = s => String(s||'').split(',').map(x => x.trim()).filter(Boolean);
+
+function openSettings(){
+  g('f_accountId').value = CFG.accountId || '';
+  g('f_region').value = CFG.region || 'EU';
+  g('f_entityGuids').value = guidsOf(appById(CFG.appId)).join('\n');
+  g('f_monitorNames').value = (CFG.monitorNames || []).join(', ');
+  g('f_weeks').value = CFG.weeks || 12;
+  g('f_hostAttribute').value = CFG.hostAttribute || 'entity.name';
+  g('f_hostLabels').value = JSON.stringify(CFG.hostLabels || {}, null, 2);
+  g('f_thresholds').value = JSON.stringify(CFG.thresholds || {}, null, 2);
+  for (const k of ['uptime','responseMs','errors','errorRate','alerts','perHost','perHostErrors','perHostAlerts'])
+    g('f_nrql_'+k).value = (CFG.nrql||{})[k] || '';
+  g('keyState').textContent = SERVER ? (HAS_KEY ? 'loaded' : 'missing') : 'server not running';
+  g('keyState').className = HAS_KEY ? 's-good' : 's-bad';
+  if (ENTITIES.length) renderEntities();
+  document.getElementById('scrim').hidden = false;
+  document.getElementById('drawer').hidden = false;
+}
+function closeSettings(){ document.getElementById('scrim').hidden = true; document.getElementById('drawer').hidden = true; }
+
+function renderEntities(){
+  const chosen = new Set(splitLines(g('f_entityGuids').value));
+  g('entList').innerHTML = ENTITIES.map(e => `<label class="ent">
+      <input type="checkbox" data-guid="${esc(e.guid)}" ${chosen.has(e.guid) ? 'checked' : ''}>
+      <span><strong>${esc(e.name)}</strong>${e.reporting === false ? ' <span class="chip">not reporting</span>' : ''}
+        <span class="meta">${esc(e.guid)}</span></span></label>`).join('');
+  g('entList').querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    const sel = [...g('entList').querySelectorAll('input:checked')].map(i => i.dataset.guid);
+    g('f_entityGuids').value = sel.join('\n');
+  }));
+}
+
+async function discover(){
+  const out = g('discoverOut');
+  const id = g('f_accountId').value.trim();
+  if (!id){ out.textContent = 'Enter an account ID first.'; out.className = 'status s-bad'; return; }
+  out.textContent = 'Searching…'; out.className = 'status';
+  try {
+    const data = await nerdgraph(GQL_ENTITIES,
+      { q: `domain = 'APM' AND type = 'APPLICATION' AND accountId = ${Number(id)}` },
+      g('f_region').value);
+    ENTITIES = (data?.actor?.entitySearch?.results?.entities || [])
+      .slice().sort((a,b) => a.name.localeCompare(b.name));
+    out.textContent = `${ENTITIES.length} APM app${ENTITIES.length===1?'':'s'} found.`;
+    out.className = 'status s-good';
+    renderEntities();
+  } catch (err){
+    out.textContent = err.message; out.className = 'status s-bad';
+  }
+}
+
+async function testConnection(){
+  const out = g('testOut');
+  const id = Number(g('f_accountId').value.trim());
+  if (!id){ out.textContent = 'Enter an account ID first.'; out.className = 'status s-bad'; return; }
+  out.textContent = 'Testing…'; out.className = 'status';
+  const tried = [];
+  for (const region of [g('f_region').value, g('f_region').value === 'EU' ? 'US' : 'EU']){
+    try {
+      const data = await nerdgraph(GQL_PING, { id }, region);
+      const acct = data?.actor?.account;
+      if (acct && acct.id){
+        out.innerHTML = `Connected to <strong>${esc(acct.name || acct.id)}</strong> on <strong>${region}</strong>.`;
+        out.className = 'status s-good';
+        g('f_region').value = region;
+        return;
+      }
+      tried.push(`${region}: no account returned`);
+    } catch (err){ tried.push(`${region}: ${err.message}`); }
+  }
+  out.textContent = tried.join(' · ');
+  out.className = 'status s-bad';
+}
+
+async function saveSettings(){
+  let hostLabels, thresholds;
+  try { hostLabels = JSON.parse(g('f_hostLabels').value || '{}'); }
+  catch { alert('Host label map is not valid JSON.'); return; }
+  try { thresholds = JSON.parse(g('f_thresholds').value || '{}'); }
+  catch { alert('Thresholds are not valid JSON.'); return; }
+
+  CFG = Object.assign({}, CFG, {
+    cfgVersion: CFG_VERSION,
+    accountId: g('f_accountId').value.trim(),
+    region: g('f_region').value,
+    applications: apps().map(x => x.id === CFG.appId
+      ? Object.assign({}, x, { entityGuids: splitLines(g('f_entityGuids').value) }) : x),
+    monitorNames: splitCommas(g('f_monitorNames').value),
+    weeks: Number(g('f_weeks').value) || 12,
+    hostAttribute: g('f_hostAttribute').value.trim() || 'entity.name',
+    hostLabels, thresholds,
+    nrql: {
+      uptime:g('f_nrql_uptime').value, responseMs:g('f_nrql_responseMs').value,
+      errors:g('f_nrql_errors').value, errorRate:g('f_nrql_errorRate').value,
+      alerts:g('f_nrql_alerts').value, perHost:g('f_nrql_perHost').value,
+      perHostErrors:g('f_nrql_perHostErrors').value,
+      perHostAlerts:g('f_nrql_perHostAlerts').value
+    }
+  });
+
+  if (SERVER){
+    try { await fetch('/api/config', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(CFG) }); } catch {}
+  }
+  try { localStorage.setItem('weeklyOpsCfg', JSON.stringify(CFG)); } catch {}
+  closeSettings(); refresh();
+}
+
+/* ---------------- theme ---------------- */
+
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">'
+  + '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
+/** Dark right now — from an explicit choice, else the operating system. */
+function isDark(){
+  const t = document.documentElement.getAttribute('data-theme');
+  if (t) return t === 'dark';
+  try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; }
+}
+
+/** The button shows the theme it will switch to. */
+function paintThemeBtn(){
+  const b = document.getElementById('themeBtn');
+  if (!b) return;
+  const dark = isDark();
+  b.innerHTML = dark ? SUN : MOON;
+  b.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+  b.setAttribute('aria-label', b.title);
+}
+
+/**
+ * When the numbers on screen were last gathered.
+ *
+ * Shown in the dashboard's own timezone, and named, so the time means the same
+ * thing wherever it is read from. Both modes get a line, because "how old is
+ * this?" is the first question either way — the published page is only as
+ * fresh as last night's pipeline, and the local one is only as fresh as the
+ * last Jira fetch, whatever New Relic does live.
+ */
+const stamp = (iso) => {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d)) return null;
+  return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour12: false,
+    day:'2-digit', month:'short', year:'numeric',
+    hour:'2-digit', minute:'2-digit', timeZoneName:'short' }).format(d);
+};
+
+function snapshotBanner(){
+  if (!SNAPSHOT) return;
+  const when = stamp(SNAPSHOT.generatedAt) || 'an earlier run';
+  const svc = SNAPSHOT.applications?.[CFG.appId] || {};
+  const stale = (svc.failures || []).length;
+  banner(stale ? 'warn' : 'good',
+    `Published snapshot, taken ${esc(when)}.` +
+    (stale ? ` ${stale} week(s) failed to refresh and may be missing.` : '') +
+    ' Updated daily by the pipeline.');
+}
+
+/**
+ * The same line for the live, locally served page. It owns its own element and
+ * sits first, so it can be rewritten when the Jira fetch lands a minute later
+ * without disturbing whatever else is on screen.
+ */
+function liveBanner(){
+  if (MODE === 'static' || !SERVER) return;
+  const nr = stamp(LAST_FETCH);
+  const jira = stamp(DELIVERY && DELIVERY.generatedAt);
+  if (!nr && !jira) return;
+  const host = document.getElementById('banners');
+  let el = document.getElementById('freshBanner');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'freshBanner';
+    host.insertBefore(el, host.firstChild);
+  }
+  el.className = 'banner good';
+  el.innerHTML = (nr ? `Live data, queried ${esc(nr)}.` : 'Live data.')
+    + (jira ? ` Jira delivery data taken ${esc(jira)}.`
+            : ' Jira delivery data not loaded.');
+}
+
+/* ---------------- boot ---------------- */
+
+async function refresh(){
+  clearBanners();
+  const btn = g('refreshBtn');
+  btn.disabled = true; btn.textContent = 'Loading…';
+  try { await loadLive(); LAST_FETCH = new Date().toISOString(); }
+  catch (err){
+    g('prog').hidden = true;
+    banner('bad', `<strong>Could not load data.</strong> ${esc(err.message)}
+      <div class="acts"><button class="btn sm" onclick="openSettings()">Open settings</button>
+      <button class="btn sm" onclick="openDiag()">Diagnostics</button></div>`);
+    if (!WEEKS.length){ WEEKS = buildWeeks(Math.max(1, Math.min(52, Number(CFG.weeks) || 12))); MODE = 'empty'; }
+  }
+  btn.disabled = false; btn.textContent = 'Refresh';
+  liveBanner();
+  render();
+}
+
+async function boot(){
+  let local = null;
+  try {
+    const s = localStorage.getItem('weeklyOpsCfg');
+    if (s){
+      const parsed = JSON.parse(s);
+      if (parsed && parsed.cfgVersion === CFG_VERSION) local = parsed;
+      else localStorage.removeItem('weeklyOpsCfg');   // stale schema, drop it
+    }
+  } catch {}
+
+  let srv = null;
+  try {
+    const res = await fetch('/api/config', { cache:'no-store' });
+    if (res.ok){ SERVER = true; srv = await res.json(); HAS_KEY = !!srv._hasKey; delete srv._hasKey; }
+  } catch { SERVER = false; }
+
+  CFG = Object.assign(structuredClone(DEFAULTS), srv || {}, local || {});
+  CFG.applications = apps();
+  const valid = id => id === ALL || apps().some(a => a.id === id);
+  if (!valid(CFG.appId)) CFG.appId = CFG.defaultApplication || ALL;
+  try {
+    const saved = localStorage.getItem('weeklyOpsApp');
+    if (saved && valid(saved)) CFG.appId = saved;
+  } catch {}
+  if (CFG.appId === ALL && apps().length < 2) CFG.appId = (apps()[0] || {}).id || ALL;
+  applyTeamName();
+
+  try { const t = localStorage.getItem('weeklyOpsTheme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch {}
+  paintThemeBtn();
+  g('themeBtn').addEventListener('click', () => {
+    document.documentElement.setAttribute('data-theme', isDark() ? 'light' : 'dark');
+    try { localStorage.setItem('weeklyOpsTheme', document.documentElement.getAttribute('data-theme')); } catch {}
+    paintThemeBtn();
+    if (NAV === 'operations' && OPS_VIEW === 'trends') renderCharts();
+  });
+
+  g('setBtn').addEventListener('click', openSettings);
+  g('closeSet').addEventListener('click', closeSettings);
+  g('cancelSet').addEventListener('click', closeSettings);
+  g('saveSet').addEventListener('click', saveSettings);
+  g('discoverBtn').addEventListener('click', discover);
+  g('testBtn').addEventListener('click', testConnection);
+  g('resetBtn').addEventListener('click', () => {
+    if (!confirm('Reset all settings to defaults?')) return;
+    try { localStorage.removeItem('weeklyOpsCfg'); } catch {}
+    CFG = structuredClone(DEFAULTS); openSettings();
+  });
+  g('diagBtn').addEventListener('click', openDiag);
+  g('closeDiag').addEventListener('click', closeDiag);
+  g('rerunDiag').addEventListener('click', () => { closeDiag(); refresh(); });
+  g('copyDiag').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(diagText()); g('copyDiag').textContent = 'Copied'; }
+    catch { g('copyDiag').textContent = 'Copy failed'; }
+    setTimeout(() => { g('copyDiag').textContent = 'Copy all'; }, 1500);
+  });
+  // history filters
+  try {
+    const s = localStorage.getItem('weeklyOpsHistFilter');
+    if (s){ const o = JSON.parse(s); HFILTER.range = Number(o.range) || 0; }
+  } catch {}
+  g('hfRange').value = String(HFILTER.range);
+  g('hfRange').addEventListener('change', () => {
+    HFILTER.range = Number(g('hfRange').value) || 0;
+    g('dvRange').value = String(HFILTER.range);
+    saveHFilter(); renderKpis(); renderTable(); renderDelivery();
+  });
+  g('hfReset').addEventListener('click', () => {
+    HFILTER.range = 0;
+    g('hfRange').value = '0';
+    saveHFilter(); renderKpis(); renderTable();
+  });
+
+  // global applications dropdown, in the header
+  try {
+    const a = localStorage.getItem('weeklyOpsApps');
+    if (a){ const parsed = JSON.parse(a); if (parsed && !Array.isArray(parsed)) APPS_BY_SVC = parsed; }
+  } catch {}
+  g('appsBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const open = g('appsMenu').hidden;
+    closeMenus(); openHostMenu(open);
+  });
+  g('appsMenu').addEventListener('click', e => e.stopPropagation());
+  g('appsAll').addEventListener('click', () => setHosts(allHostNames(), allHostNames()));
+  g('appsNone').addEventListener('click', () => setHosts([], allHostNames()));
+
+  g('ctReset').addEventListener('click', () => {
+    CHART_OPTS = { total:true, range:26, partial:false };
+    g('optTotal').checked = true;
+    g('optPartial').checked = false;
+    g('optRange').value = '26';
+    try { localStorage.setItem('weeklyOpsChartOpts', JSON.stringify(CHART_OPTS)); } catch {}
+    renderCharts();
+  });
+
+  document.addEventListener('click', closeMenus);
+
+  renderServiceSelect();
+  g('svcBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const open = g('svcMenu').hidden;
+    closeMenus(); setMenu('svcBtn', 'svcMenu', open);
+  });
+  g('svcMenu').addEventListener('click', e => e.stopPropagation());
+
+  g('navOverview').addEventListener('click', () => showSection('overview'));
+  g('navOperations').addEventListener('click', () => showSection('operations'));
+  g('navDelivery').addEventListener('click', () => showSection('delivery'));
+  g('dvBtnHistory').addEventListener('click', () => showSection('delivery', 'history'));
+  g('dvBtnTrends').addEventListener('click', () => showSection('delivery', 'trends'));
+  try {
+    const o = JSON.parse(localStorage.getItem('weeklyOpsDvOpts') || 'null');
+    if (o) DV_OPTS = Object.assign(DV_OPTS, o);
+  } catch {}
+  g('dvcRange').value = String(DV_OPTS.range);
+  g('dvcPartial').checked = DV_OPTS.partial;
+  const dvcSave = () => {
+    try { localStorage.setItem('weeklyOpsDvOpts', JSON.stringify(DV_OPTS)); } catch {}
+    renderDeliveryCharts();
+  };
+  g('dvcRange').addEventListener('change', () => { DV_OPTS.range = Number(g('dvcRange').value) || 0; dvcSave(); });
+  g('dvcPartial').addEventListener('change', () => { DV_OPTS.partial = g('dvcPartial').checked; dvcSave(); });
+  g('dvcReset').addEventListener('click', () => {
+    DV_OPTS = { range:26, partial:false };
+    g('dvcRange').value = '26'; g('dvcPartial').checked = false; dvcSave();
+  });
+  g('tabBtnHistory').addEventListener('click', () => showSection('operations', 'history'));
+  g('tabBtnTrends').addEventListener('click', () => showSection('operations', 'trends'));
+  try {
+    const r = localStorage.getItem('weeklyOpsMatrixRange');
+    if (r !== null && g('mxRange').querySelector(`option[value="${r}"]`)) g('mxRange').value = r;
+  } catch {}
+  g('mxRange').addEventListener('change', () => {
+    try { localStorage.setItem('weeklyOpsMatrixRange', g('mxRange').value); } catch {}
+    renderMatrix();
+  });
+  g('dvRange').value = String(HFILTER.range);
+  g('dvRange').addEventListener('change', () => {
+    HFILTER.range = Number(g('dvRange').value) || 0;
+    g('hfRange').value = String(HFILTER.range);   // one week range across tabs
+    saveHFilter(); renderKpis(); renderTable(); renderDelivery();
+  });
+  const optBind = (id, key, kind) => g(id).addEventListener('change', () => {
+    CHART_OPTS[key] = kind === 'num' ? Number(g(id).value) : g(id).checked;
+    try { localStorage.setItem('weeklyOpsChartOpts', JSON.stringify(CHART_OPTS)); } catch {}
+    renderCharts();
+  });
+  try {
+    const s = localStorage.getItem('weeklyOpsChartOpts');
+    if (s) CHART_OPTS = Object.assign(CHART_OPTS, JSON.parse(s));
+  } catch {}
+  g('optTotal').checked = CHART_OPTS.total;
+  g('optPartial').checked = CHART_OPTS.partial;
+  g('optRange').value = String(CHART_OPTS.range);
+  optBind('optTotal','total');
+  optBind('optPartial','partial'); optBind('optRange','range','num');
+  await loadDelivery();
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('weeklyOpsNav') || 'null');
+    if (saved && SECTIONS[saved.section]) showSection(saved.section, saved.view);
+    else showSection('overview');
+  } catch { showSection('overview'); }
+
+  g('csvBtn').addEventListener('click', exportCsv);
+  g('refreshBtn').addEventListener('click', refresh);
+  document.getElementById('scrim').addEventListener('click', () => { closeSettings(); closeDiag(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape'){ closeSettings(); closeDiag(); closeMenus(); }
+  });
+
+  // Running locally, server.py kicks off the Jira refresh in the background,
+  // so the file can appear a minute after the page has loaded. Watch for it
+  // rather than making the reader guess when to reload.
+  await loadEngagement();
+  if (!DELIVERY && SERVER){ await checkServerFreshness(); if (!SERVER_STALE) watchForDelivery(); }
+
+  if (!SERVER){
+    if (await loadSnapshot()){
+      for (const id of ['refreshBtn','setBtn','diagBtn']) g(id).hidden = true;
+      renderServiceSelect();
+      snapshotBanner();
+      render(); return;
+    }
+    banner('warn', '<strong>Read-only preview.</strong> This page is not being served by <code>server.py</code>, ' +
+      'so it cannot reach New Relic. Run <code>python3 server.py</code> and open <code>http://localhost:8787</code>.');
+    WEEKS = buildWeeks(Math.max(1, Math.min(52, Number(CFG.weeks) || 12)));
+    render(); return;
+  }
+  if (!HAS_KEY || !CFG.accountId || !apps().length){
+    banner('warn', '<strong>Setup needed.</strong> ' +
+      (HAS_KEY ? '' : 'Put your New Relic User key in <code>api_key.txt</code> and restart the server. ') +
+      (CFG.accountId ? '' : 'Add your account ID in Settings. ') +
+      (apps().length ? '' : 'config.json lists no applications.') +
+      '<div class="acts"><button class="btn sm" onclick="openSettings()">Open settings</button></div>');
+    WEEKS = buildWeeks(Math.max(1, Math.min(52, Number(CFG.weeks) || 12)));
+    render(); return;
+  }
+  refresh();
+}
+
+window.openSettings = openSettings;
+window.openDiag = openDiag;
+boot();
+</script>
+</body>
+</html>
